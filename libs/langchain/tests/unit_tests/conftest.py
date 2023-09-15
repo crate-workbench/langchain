@@ -49,8 +49,8 @@ def pytest_collection_modifyitems(config: Config, items: Sequence[Function]) -> 
     # Used to avoid repeated calls to `util.find_spec`
     required_pkgs_info: Dict[str, bool] = {}
 
-    only_extended = config.getoption("--only-extended") or False
-    only_core = config.getoption("--only-core") or False
+    only_extended = config.getoption("--only-extended", False)
+    only_core = config.getoption("--only-core", False)
 
     if not config.getoption("--community"):
         skip_community = pytest.mark.skip(reason="need --community option to run")
