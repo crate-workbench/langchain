@@ -33,6 +33,7 @@ from langchain.vectorstores.cassandra import Cassandra
 from langchain.vectorstores.chroma import Chroma
 from langchain.vectorstores.clarifai import Clarifai
 from langchain.vectorstores.clickhouse import Clickhouse, ClickhouseSettings
+from langchain.vectorstores.cratedb import CrateDBVectorSearch
 from langchain.vectorstores.dashvector import DashVector
 from langchain.vectorstores.deeplake import DeepLake
 from langchain.vectorstores.dingo import Dingo
@@ -97,6 +98,7 @@ __all__ = [
     "Clarifai",
     "Clickhouse",
     "ClickhouseSettings",
+    "CrateDBVectorSearch",
     "DashVector",
     "DeepLake",
     "DeepLake",
