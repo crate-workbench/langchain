@@ -134,6 +134,12 @@ def _import_clickhouse_settings() -> Any:
     return ClickhouseSettings
 
 
+def _import_cratedb() -> Any:
+    from langchain.vectorstores.cratedb import CrateDBVectorSearch
+
+    return CrateDBVectorSearch
+
+
 def _import_dashvector() -> Any:
     from langchain.vectorstores.dashvector import DashVector
 
@@ -459,6 +465,8 @@ def __getattr__(name: str) -> Any:
         return _import_clickhouse_settings()
     elif name == "Clickhouse":
         return _import_clickhouse()
+    elif name == "CrateDBVectorSearch":
+        return _import_cratedb()
     elif name == "DashVector":
         return _import_dashvector()
     elif name == "DeepLake":
@@ -574,6 +582,7 @@ __all__ = [
     "Clarifai",
     "Clickhouse",
     "ClickhouseSettings",
+    "CrateDBVectorSearch",
     "DashVector",
     "DeepLake",
     "Dingo",
