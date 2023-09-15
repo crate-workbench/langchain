@@ -109,6 +109,8 @@ dgml-utils = {version = "^0.3.0", optional = true}
 datasets = {version = "^2.15.0", optional = true}
 langchain-openai = {version = "^0.1", optional = true}
 rdflib = {version = "7.0.0", optional = true}
+crate = {version = "^0.34.0", extras=["sqlalchemy"], optional = true}
+cratedb-toolkit = {version = ">=0.0.1", optional = true}
 
 [tool.poetry.group.test]
 optional = true
@@ -212,6 +214,7 @@ cohere = ["cohere"]
 docarray = ["docarray"]
 embeddings = ["sentence-transformers"]
 javascript = ["esprima"]
+cratedb = ["crate", "cratedb-toolkit"]
 azure = [
     "azure-identity",
     "azure-cosmos",
