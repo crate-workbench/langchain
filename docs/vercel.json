@@ -557,6 +557,10 @@
       "destination": "/docs/integrations/providers/chaindesk"
     },
     {
+      "source": "/docs/integrations/cratedb",
+      "destination": "/docs/integrations/providers/cratedb"
+    },
+    {
       "source": "/docs/integrations/databricks",
       "destination": "/docs/integrations/providers/databricks"
     },
@@ -2691,6 +2695,14 @@
     {
       "source": "/docs/modules/data_connection/vectorstores/integrations/chroma",
       "destination": "/docs/integrations/vectorstores/chroma"
+    },
+    {
+      "source": "/en/latest/modules/indexes/vectorstores/examples/cratedb.html",
+      "destination": "/docs/integrations/vectorstores/cratedb"
+    },
+    {
+      "source": "/docs/modules/data_connection/vectorstores/integrations/cratedb",
+      "destination": "/docs/integrations/vectorstores/cratedb"
     },
     {
       "source": "/en/latest/modules/indexes/vectorstores/examples/deeplake.html",
