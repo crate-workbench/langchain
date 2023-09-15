@@ -23,12 +23,12 @@ import numpy as np
 import sqlalchemy
 from sqlalchemy import delete
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Session
 
 try:
     from sqlalchemy.orm import declarative_base
 except ImportError:
     from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import Session, sessionmaker
 
 from langchain.docstore.document import Document
 from langchain.schema.embeddings import Embeddings
@@ -135,7 +135,8 @@ class PGVector(VectorStore):
         """
         Initialize the store.
         """
-        self._conn = self.connect()
+        self._engine = self.create_engine()
+        self.Session = sessionmaker(self._engine)
         self.create_vector_extension()
         from langchain.vectorstores._pgvector_data_models import (
             CollectionStore,
@@ -151,14 +152,15 @@ class PGVector(VectorStore):
     def embeddings(self) -> Embeddings:
         return self.embedding_function
 
+    def create_engine(self) -> sqlalchemy.Engine:
+        return sqlalchemy.create_engine(self.connection_string, echo=False)
+
     def connect(self) -> sqlalchemy.engine.Connection:
-        engine = sqlalchemy.create_engine(self.connection_string, **self.engine_args)
-        conn = engine.connect()
-        return conn
+        return self._engine.connect()
 
     def create_vector_extension(self) -> None:
         try:
-            with Session(self._conn) as session:
+            with self.Session() as session:
                 statement = sqlalchemy.text("CREATE EXTENSION IF NOT EXISTS vector")
                 session.execute(statement)
                 session.commit()
@@ -166,24 +168,22 @@ class PGVector(VectorStore):
             raise Exception(f"Failed to create vector extension: {e}") from e
 
     def create_tables_if_not_exists(self) -> None:
-        with self._conn.begin():
-            Base.metadata.create_all(self._conn)
+        Base.metadata.create_all(self._engine)
 
     def drop_tables(self) -> None:
-        with self._conn.begin():
-            Base.metadata.drop_all(self._conn)
+        Base.metadata.drop_all(self._engine)
 
     def create_collection(self) -> None:
         if self.pre_delete_collection:
             self.delete_collection()
-        with Session(self._conn) as session:
+        with self.Session() as session:
             self.CollectionStore.get_or_create(
                 session, self.collection_name, cmetadata=self.collection_metadata
             )
 
     def delete_collection(self) -> None:
         self.logger.debug("Trying to delete collection")
-        with Session(self._conn) as session:
+        with self.Session() as session:
             collection = self.get_collection(session)
             if not collection:
                 self.logger.warning("Collection not found")
@@ -194,7 +194,7 @@ class PGVector(VectorStore):
     @contextlib.contextmanager
     def _make_session(self) -> Generator[Session, None, None]:
         """Create a context manager for the session, bind to _conn string."""
-        yield Session(self._conn)
+        yield self.Session()
 
     def delete(
         self,
@@ -206,7 +206,7 @@ class PGVector(VectorStore):
         Args:
             ids: List of ids to delete.
         """
-        with Session(self._conn) as session:
+        with self.Session() as session:
             if ids is not None:
                 self.logger.debug(
                     "Trying to delete vectors by ids (represented by the model "
@@ -222,7 +222,7 @@ class PGVector(VectorStore):
         return self.CollectionStore.get_by_name(session, self.collection_name)
 
     @classmethod
-    def __from(
+    def _from(
         cls,
         texts: List[str],
         embeddings: List[List[float]],
@@ -280,7 +280,7 @@ class PGVector(VectorStore):
         if not metadatas:
             metadatas = [{} for _ in texts]
 
-        with Session(self._conn) as session:
+        with self.Session() as session:
             collection = self.get_collection(session)
             if not collection:
                 raise ValueError("Collection not found")
@@ -385,7 +385,7 @@ class PGVector(VectorStore):
         k: int = 4,
         filter: Optional[dict] = None,
     ) -> List[Tuple[Document, float]]:
-        results = self.__query_collection(embedding=embedding, k=k, filter=filter)
+        results = self._query_collection(embedding=embedding, k=k, filter=filter)
 
         return self._results_to_docs_and_scores(results)
 
@@ -403,14 +403,14 @@ class PGVector(VectorStore):
         ]
         return docs
 
-    def __query_collection(
+    def _query_collection(
         self,
         embedding: List[float],
         k: int = 4,
         filter: Optional[Dict[str, str]] = None,
     ) -> List[Any]:
         """Query the collection."""
-        with Session(self._conn) as session:
+        with self.Session() as session:
             collection = self.get_collection(session)
             if not collection:
                 raise ValueError("Collection not found")
@@ -497,7 +497,7 @@ class PGVector(VectorStore):
         """
         embeddings = embedding.embed_documents(list(texts))
 
-        return cls.__from(
+        return cls._from(
             texts,
             embeddings,
             embedding,
@@ -542,7 +542,7 @@ class PGVector(VectorStore):
         texts = [t[0] for t in text_embeddings]
         embeddings = [t[1] for t in text_embeddings]
 
-        return cls.__from(
+        return cls._from(
             texts,
             embeddings,
             embedding,
@@ -703,7 +703,7 @@ class PGVector(VectorStore):
             List[Tuple[Document, float]]: List of Documents selected by maximal marginal
                 relevance to the query and score for each.
         """
-        results = self.__query_collection(embedding=embedding, k=fetch_k, filter=filter)
+        results = self._query_collection(embedding=embedding, k=fetch_k, filter=filter)
 
         embedding_list = [result.EmbeddingStore.embedding for result in results]
 
