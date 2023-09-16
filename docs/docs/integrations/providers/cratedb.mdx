@@ -38,7 +38,8 @@ data, and query it using SQL.
 
 ## Features
 
-The CrateDB adapter supports the Vector Store subsystem of LangChain.
+The CrateDB adapter supports the _Vector Store_ and _Document Loader_
+subsystems of LangChain.
 
 ### Vector Store
 
@@ -50,6 +51,11 @@ point vectors, and to conduct similarity searches.
 Supports:
 - Approximate nearest neighbor search.
 - Euclidean distance.
+
+### Document Loader
+
+`CrateDBLoader` provides loading documents from a database table by an SQL
+query expression or an SQLAlchemy selectable instance.
 
 
 ## Installation and Setup
@@ -74,19 +80,19 @@ docker run --rm -it --name=cratedb --publish=4200:4200 --publish=5432:5432 \
 ### Install Client
 
 ```bash
-pip install 'crate[sqlalchemy]' 'langchain[openai]'
+pip install 'crate[sqlalchemy]' 'langchain[openai]' 'crash'
 ```
 
 
-## Usage
+## Usage » Vector Store
 
 For a more detailed walkthrough of the `CrateDBVectorSearch` wrapper, there is also
 a corresponding [Jupyter notebook](/docs/extras/integrations/vectorstores/cratedb.html).
 
-### Acquire text file
+### Provide input data
 The example uses the canonical `state_of_the_union.txt`.
 ```shell
-wget https://raw.githubusercontent.com/langchain-ai/langchain/v0.0.291/docs/extras/modules/state_of_the_union.txt
+wget https://github.com/langchain-ai/langchain/raw/v0.0.325/docs/docs/modules/state_of_the_union.txt
 ```
 
 ### Set environment variables
@@ -97,7 +103,7 @@ export CRATEDB_CONNECTION_STRING=crate://crate@localhost
 ```
 
 ```python
-from langchain.document_loaders import TextLoader
+from langchain.document_loaders import UnstructuredURLLoader
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import CrateDBVectorSearch
@@ -105,7 +111,7 @@ from langchain.vectorstores import CrateDBVectorSearch
 
 def main():
   # Load the document, split it into chunks, embed each chunk and load it into the vector store.
-  raw_documents = TextLoader("state_of_the_union.txt").load()
+  raw_documents = UnstructuredURLLoader("https://github.com/langchain-ai/langchain/raw/v0.0.325/docs/docs/modules/state_of_the_union.txt").load()
   text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
   documents = text_splitter.split_documents(raw_documents)
   db = CrateDBVectorSearch.from_documents(documents, OpenAIEmbeddings())
@@ -114,6 +120,37 @@ def main():
   docs = db.similarity_search(query)
   print(docs[0].page_content)
 
+
+if __name__ == "__main__":
+  main()
+```
+
+
+## Usage » Document Loader
+
+For a more detailed walkthrough of the `CrateDBLoader`, there is also a corresponding
+[Jupyter notebook](/docs/extras/integrations/document_loaders/cratedb.html).
+
+
+### Provide input data
+```shell
+wget https://github.com/crate-workbench/langchain/raw/cratedb/docs/docs/integrations/document_loaders/example_data/mlb_teams_2012.sql
+crash < ./example_data/mlb_teams_2012.sql
+crash --command "REFRESH TABLE mlb_teams_2012;"
+```
+
+### Load documents by SQL query
+```python
+from langchain.document_loaders import CrateDBLoader
+from pprint import pprint
+
+def main():
+  loader = CrateDBLoader(
+      'SELECT * FROM mlb_teams_2012 ORDER BY "Team" LIMIT 5;',
+      url="crate://crate@localhost/",
+  )
+  documents = loader.load()
+  pprint(documents)
 
 if __name__ == "__main__":
   main()

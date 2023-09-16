@@ -1,5 +1,6 @@
 -- Provisioning table "mlb_teams_2012".
 --
+-- crash < mlb_teams_2012.sql
 -- psql postgresql://postgres@localhost < mlb_teams_2012.sql
 
 DROP TABLE IF EXISTS mlb_teams_2012;
