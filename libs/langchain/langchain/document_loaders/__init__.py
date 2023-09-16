@@ -154,6 +154,7 @@ from langchain.document_loaders.sitemap import SitemapLoader
 from langchain.document_loaders.slack_directory import SlackDirectoryLoader
 from langchain.document_loaders.snowflake_loader import SnowflakeLoader
 from langchain.document_loaders.spreedly import SpreedlyLoader
+from langchain.document_loaders.sqlalchemy import SQLAlchemyLoader
 from langchain.document_loaders.srt import SRTLoader
 from langchain.document_loaders.stripe import StripeLoader
 from langchain.document_loaders.telegram import (
@@ -325,6 +326,7 @@ __all__ = [
     "SlackDirectoryLoader",
     "SnowflakeLoader",
     "SpreedlyLoader",
+    "SQLAlchemyLoader",
     "StripeLoader",
     "TelegramChatApiLoader",
     "TelegramChatFileLoader",
