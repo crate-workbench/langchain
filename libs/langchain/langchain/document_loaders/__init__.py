@@ -59,6 +59,7 @@ from langchain.document_loaders.college_confidential import CollegeConfidentialL
 from langchain.document_loaders.concurrent import ConcurrentLoader
 from langchain.document_loaders.confluence import ConfluenceLoader
 from langchain.document_loaders.conllu import CoNLLULoader
+from langchain.document_loaders.cratedb import CrateDBLoader
 from langchain.document_loaders.csv_loader import CSVLoader, UnstructuredCSVLoader
 from langchain.document_loaders.cube_semantic import CubeSemanticLoader
 from langchain.document_loaders.datadog_logs import DatadogLogsLoader
@@ -156,6 +157,7 @@ from langchain.document_loaders.sitemap import SitemapLoader
 from langchain.document_loaders.slack_directory import SlackDirectoryLoader
 from langchain.document_loaders.snowflake_loader import SnowflakeLoader
 from langchain.document_loaders.spreedly import SpreedlyLoader
+from langchain.document_loaders.sqlalchemy import SQLAlchemyLoader
 from langchain.document_loaders.srt import SRTLoader
 from langchain.document_loaders.stripe import StripeLoader
 from langchain.document_loaders.telegram import (
@@ -242,6 +244,7 @@ __all__ = [
     "CollegeConfidentialLoader",
     "ConcurrentLoader",
     "ConfluenceLoader",
+    "CrateDBLoader",
     "CubeSemanticLoader",
     "DataFrameLoader",
     "DatadogLogsLoader",
@@ -329,6 +332,7 @@ __all__ = [
     "SlackDirectoryLoader",
     "SnowflakeLoader",
     "SpreedlyLoader",
+    "SQLAlchemyLoader",
     "StripeLoader",
     "TelegramChatApiLoader",
     "TelegramChatFileLoader",
