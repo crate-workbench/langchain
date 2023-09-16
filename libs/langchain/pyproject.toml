@@ -136,6 +136,7 @@ requests-mock = "^1.11.0"
 langchain-core = {path = "../core", develop = true}
 langchain-text-splitters = {path = "../text-splitters", develop = true}
 langchain-openai = {path = "../partners/openai", optional = true, develop = true}
+sqlparse = "^0.4.4"
 
 [tool.poetry.group.codespell]
 optional = true
