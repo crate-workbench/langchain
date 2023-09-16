@@ -1449,6 +1449,10 @@
       "destination": "/docs/integrations/document_loaders/copypaste"
     },
     {
+      "source": "/docs/modules/data_connection/document_loaders/integrations/cratedb",
+      "destination": "/docs/integrations/document_loaders/cratedb"
+    },
+    {
       "source": "/en/latest/modules/indexes/document_loaders/examples/csv.html",
       "destination": "/docs/integrations/document_loaders/csv"
     },
