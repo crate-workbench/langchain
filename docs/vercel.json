@@ -2961,6 +2961,14 @@
       "destination": "/docs/integrations/memory/sqlite"
     },
     {
+      "source": "/en/latest/modules/memory/examples/cratedb_chat_message_history.html",
+      "destination": "/docs/integrations/memory/cratedb_chat_message_history"
+    },
+    {
+      "source": "/docs/modules/memory/integrations/cratedb_chat_message_history",
+      "destination": "/docs/integrations/memory/cratedb_chat_message_history"
+    },
+    {
       "source": "/en/latest/modules/memory/examples/dynamodb_chat_message_history.html",
       "destination": "/docs/integrations/memory/dynamodb_chat_message_history"
     },
