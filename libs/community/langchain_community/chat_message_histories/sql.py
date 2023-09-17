@@ -15,7 +15,7 @@ from typing import (
 )
 
 from langchain_core._api import deprecated, warn_deprecated
-from sqlalchemy import Column, Integer, Text, delete, select
+from sqlalchemy import Column, Integer, Select, Text, create_engine, delete, select
 
 try:
     from sqlalchemy.orm import declarative_base
@@ -27,7 +27,6 @@ from langchain_core.messages import (
     message_to_dict,
     messages_from_dict,
 )
-from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -38,7 +37,6 @@ from sqlalchemy.orm import (
     Session as SQLSession,
 )
 from sqlalchemy.orm import (
-    declarative_base,
     scoped_session,
     sessionmaker,
 )
@@ -54,6 +52,10 @@ logger = logging.getLogger(__name__)
 
 class BaseMessageConverter(ABC):
     """Convert BaseMessage to the SQLAlchemy model."""
+
+    @abstractmethod
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        raise NotImplementedError
 
     @abstractmethod
     def from_sql_model(self, sql_message: Any) -> BaseMessage:
@@ -220,7 +222,9 @@ class SQLChatMessageHistory(BaseChatMessageHistory):
             self.session_maker = scoped_session(sessionmaker(bind=self.engine))
 
         self.session_id_field_name = session_id_field_name
-        self.converter = custom_message_converter or DefaultMessageConverter(table_name)
+        self.converter = custom_message_converter or self.DEFAULT_MESSAGE_CONVERTER(
+            table_name
+        )
         self.sql_model_class = self.converter.get_sql_model_class()
         if not hasattr(self.sql_model_class, session_id_field_name):
             raise ValueError("SQL model class must have session_id column")
@@ -240,6 +244,17 @@ class SQLChatMessageHistory(BaseChatMessageHistory):
             async with self.async_engine.begin() as conn:
                 await conn.run_sync(self.sql_model_class.metadata.create_all)
             self._table_created = True
+
+    def _messages_query(self) -> Select:
+        """Construct an SQLAlchemy selectable to query for messages"""
+        return (
+            select(self.sql_model_class)
+            .where(
+                getattr(self.sql_model_class, self.session_id_field_name)
+                == self.session_id
+            )
+            .order_by(self.sql_model_class.id.asc())
+        )
 
     @property
     def messages(self) -> List[BaseMessage]:  # type: ignore
