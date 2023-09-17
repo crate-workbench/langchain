@@ -5,6 +5,7 @@ from langchain.memory.chat_message_histories.cassandra import (
     CassandraChatMessageHistory,
 )
 from langchain.memory.chat_message_histories.cosmos_db import CosmosDBChatMessageHistory
+from langchain.memory.chat_message_histories.cratedb import CrateDBChatMessageHistory
 from langchain.memory.chat_message_histories.dynamodb import DynamoDBChatMessageHistory
 from langchain.memory.chat_message_histories.elasticsearch import (
     ElasticsearchChatMessageHistory,
@@ -38,6 +39,7 @@ __all__ = [
     "ChatMessageHistory",
     "CassandraChatMessageHistory",
     "CosmosDBChatMessageHistory",
+    "CrateDBChatMessageHistory",
     "DynamoDBChatMessageHistory",
     "ElasticsearchChatMessageHistory",
     "FileChatMessageHistory",
