@@ -1,9 +1,9 @@
 import json
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Type
 
-from sqlalchemy import Column, Integer, Text, create_engine
+from sqlalchemy import Column, Integer, Select, Text, create_engine, select
 
 try:
     from sqlalchemy.orm import declarative_base
@@ -22,6 +22,10 @@ logger = logging.getLogger(__name__)
 
 class BaseMessageConverter(ABC):
     """The class responsible for converting BaseMessage to your SQLAlchemy model."""
+
+    @abstractmethod
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        raise NotImplementedError
 
     @abstractmethod
     def from_sql_model(self, sql_message: Any) -> BaseMessage:
@@ -52,7 +56,7 @@ def create_message_model(table_name, DynamicBase):  # type: ignore
 
     """
 
-    # Model decleared inside a function to have a dynamic table name
+    # Model declared inside a function to have a dynamic table name
     class Message(DynamicBase):
         __tablename__ = table_name
         id = Column(Integer, primary_key=True)
@@ -83,6 +87,8 @@ class DefaultMessageConverter(BaseMessageConverter):
 class SQLChatMessageHistory(BaseChatMessageHistory):
     """Chat message history stored in an SQL database."""
 
+    DEFAULT_MESSAGE_CONVERTER: Type[BaseMessageConverter] = DefaultMessageConverter
+
     def __init__(
         self,
         session_id: str,
@@ -94,7 +100,9 @@ class SQLChatMessageHistory(BaseChatMessageHistory):
         self.connection_string = connection_string
         self.engine = create_engine(connection_string, echo=False)
         self.session_id_field_name = session_id_field_name
-        self.converter = custom_message_converter or DefaultMessageConverter(table_name)
+        self.converter = custom_message_converter or self.DEFAULT_MESSAGE_CONVERTER(
+            table_name
+        )
         self.sql_model_class = self.converter.get_sql_model_class()
         if not hasattr(self.sql_model_class, session_id_field_name):
             raise ValueError("SQL model class must have session_id column")
@@ -106,21 +114,25 @@ class SQLChatMessageHistory(BaseChatMessageHistory):
     def _create_table_if_not_exists(self) -> None:
         self.sql_model_class.metadata.create_all(self.engine)
 
+    def _messages_query(self) -> Select:
+        """Construct an SQLAlchemy selectable to query for messages"""
+        return (
+            select(self.sql_model_class)
+            .where(
+                getattr(self.sql_model_class, self.session_id_field_name)
+                == self.session_id
+            )
+            .order_by(self.sql_model_class.id.asc())
+        )
+
     @property
     def messages(self) -> List[BaseMessage]:  # type: ignore
         """Retrieve all messages from db"""
         with self.Session() as session:
-            result = (
-                session.query(self.sql_model_class)
-                .where(
-                    getattr(self.sql_model_class, self.session_id_field_name)
-                    == self.session_id
-                )
-                .order_by(self.sql_model_class.id.asc())
-            )
+            result = session.execute(self._messages_query())
             messages = []
             for record in result:
-                messages.append(self.converter.from_sql_model(record))
+                messages.append(self.converter.from_sql_model(record[0]))
             return messages
 
     def add_message(self, message: BaseMessage) -> None:
