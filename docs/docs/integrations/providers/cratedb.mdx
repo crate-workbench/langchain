@@ -38,8 +38,8 @@ data, and query it using SQL.
 
 ## Features
 
-The CrateDB adapter supports the _Vector Store_ and _Document Loader_
-subsystems of LangChain.
+The CrateDB adapter supports the _Vector Store_, _Document Loader_,
+and _Conversational Memory_ subsystems of LangChain.
 
 ### Vector Store
 
@@ -56,6 +56,10 @@ Supports:
 
 `CrateDBLoader` provides loading documents from a database table by an SQL
 query expression or an SQLAlchemy selectable instance.
+
+### Conversational Memory
+
+`CrateDBChatMessageHistory` uses CrateDB to manage conversation history.
 
 
 ## Installation and Setup
@@ -151,6 +155,29 @@ def main():
   )
   documents = loader.load()
   pprint(documents)
+
+if __name__ == "__main__":
+  main()
+```
+
+
+## Usage » Conversational Memory
+
+For a more detailed walkthrough of the `CrateDBChatMessageHistory`, there is also a corresponding
+[Jupyter notebook](/docs/extras/integrations/memory/cratedb_chat_message_history.html).
+
+```python
+from langchain.memory.chat_message_histories import CrateDBChatMessageHistory
+from pprint import pprint
+
+def main():
+  chat_message_history = CrateDBChatMessageHistory(
+      session_id="test_session",
+      connection_string="crate://crate@localhost/",
+  )
+  chat_message_history.add_user_message("Hello")
+  chat_message_history.add_ai_message("Hi")
+  pprint(chat_message_history)
 
 if __name__ == "__main__":
   main()
