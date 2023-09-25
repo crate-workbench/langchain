@@ -247,7 +247,6 @@ class CrateDBVectorSearch(PGVector):
                     self.EmbeddingStore.collection_id == self.CollectionStore.uuid,
                 )
                 .limit(k)
-                .all()
             )
         return results
 
