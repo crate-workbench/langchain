@@ -7,6 +7,7 @@ from typing import (
     Any,
     Callable,
     Dict,
+    Iterable,
     List,
     Optional,
     Tuple,
@@ -111,15 +112,45 @@ class CrateDBVectorSearch(PGVector):
         # TODO: See what can be improved here.
         polyfill_refresh_after_dml(self.Session)
 
-        from langchain.vectorstores.cratedb.model import (
-            CollectionStore,
-            EmbeddingStore,
-        )
+        self.CollectionStore = None
+        self.EmbeddingStore = None
 
-        self.CollectionStore = CollectionStore
-        self.EmbeddingStore = EmbeddingStore
+    def get_collection(
+        self, session: sqlalchemy.orm.Session
+    ) -> Optional["CollectionStore"]:
+        if self.CollectionStore is None:
+            raise RuntimeError(
+                "Collection can't be accessed without specifying dimension size of embedding vectors"
+            )
+        return self.CollectionStore.get_by_name(session, self.collection_name)
+
+    def add_embeddings(
+        self,
+        texts: Iterable[str],
+        embeddings: List[List[float]],
+        metadatas: Optional[List[dict]] = None,
+        ids: Optional[List[str]] = None,
+        **kwargs: Any,
+    ) -> List[str]:
+        """Add embeddings to the vectorstore.
+
+        Args:
+            texts: Iterable of strings to add to the vectorstore.
+            embeddings: List of list of embedding vectors.
+            metadatas: List of metadatas associated with the texts.
+            kwargs: vectorstore specific parameters
+        """
+        from langchain.vectorstores.cratedb.model import model_factory
+
+        dimensions = len(embeddings[0])
+        self.CollectionStore, self.EmbeddingStore = model_factory(dimensions=dimensions)
+        if self.pre_delete_collection:
+            self.delete_collection()
         self.create_tables_if_not_exists()
         self.create_collection()
+        return super().add_embeddings(
+            texts=texts, embeddings=embeddings, metadatas=metadatas, ids=ids, **kwargs
+        )
 
     def create_tables_if_not_exists(self) -> None:
         """

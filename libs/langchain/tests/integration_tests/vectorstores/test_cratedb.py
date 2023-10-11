@@ -9,6 +9,7 @@ from typing import List, Tuple
 
 import pytest
 import sqlalchemy as sa
+from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.orm import Session
 
 from langchain.docstore.document import Document
@@ -46,8 +47,9 @@ def drop_tables(engine: sa.Engine) -> None:
     """
     try:
         BaseModel.metadata.drop_all(engine, checkfirst=False)
-    except Exception:
-        pass
+    except Exception as ex:
+        if "RelationUnknown" not in str(ex):
+            raise
 
 
 @pytest.fixture
@@ -57,10 +59,20 @@ def prune_tables(engine: sa.Engine) -> None:
     """
     with engine.connect() as conn:
         with Session(conn) as session:
-            from langchain.vectorstores.cratedb import CollectionStore, EmbeddingStore
+            from langchain.vectorstores.cratedb.model import model_factory
 
-            session.query(CollectionStore).delete()
-            session.query(EmbeddingStore).delete()
+            # While it does not have any function here, you will still need to supply a
+            # dummy dimension size value for deleting records from tables.
+            CollectionStore, EmbeddingStore = model_factory(dimensions=1024)
+
+            try:
+                session.query(CollectionStore).delete()
+            except ProgrammingError:
+                pass
+            try:
+                session.query(EmbeddingStore).delete()
+            except ProgrammingError:
+                pass
 
 
 def decode_output(
@@ -228,20 +240,38 @@ def test_cratedb_with_filter_no_match() -> None:
 
 def test_cratedb_collection_with_metadata() -> None:
     """Test end to end collection construction"""
-    cratedb_vector = CrateDBVectorSearch(
+    texts = ["foo", "bar", "baz"]
+    metadatas = [{"page": str(i)} for i in range(len(texts))]
+    cratedb_vector = CrateDBVectorSearch.from_texts(
+        texts=texts,
         collection_name="test_collection",
         collection_metadata={"foo": "bar"},
-        embedding_function=FakeEmbeddingsWithAdaDimension(),
+        embedding=FakeEmbeddingsWithAdaDimension(),
+        metadatas=metadatas,
         connection_string=CONNECTION_STRING,
         pre_delete_collection=True,
     )
-    session = Session(cratedb_vector.connect())
-    collection = cratedb_vector.get_collection(session)
+    collection = cratedb_vector.get_collection(cratedb_vector.Session())
     if collection is None:
         assert False, "Expected a CollectionStore object but received None"
     else:
         assert collection.name == "test_collection"
         assert collection.cmetadata == {"foo": "bar"}
+
+
+def test_cratedb_collection_no_embedding_dimension() -> None:
+    """Test end to end collection construction"""
+    cratedb_vector = CrateDBVectorSearch(
+        embedding_function=None,
+        connection_string=CONNECTION_STRING,
+        pre_delete_collection=True,
+    )
+    session = Session(cratedb_vector.connect())
+    with pytest.raises(RuntimeError) as ex:
+        cratedb_vector.get_collection(session)
+    assert ex.match(
+        "Collection can't be accessed without specifying dimension size of embedding vectors"
+    )
 
 
 def test_cratedb_with_filter_in_set() -> None:
