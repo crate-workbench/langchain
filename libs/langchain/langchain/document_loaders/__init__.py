@@ -59,6 +59,7 @@ from langchain.document_loaders.college_confidential import CollegeConfidentialL
 from langchain.document_loaders.concurrent import ConcurrentLoader
 from langchain.document_loaders.confluence import ConfluenceLoader
 from langchain.document_loaders.conllu import CoNLLULoader
+from langchain.document_loaders.cratedb import CrateDBLoader
 from langchain.document_loaders.csv_loader import CSVLoader, UnstructuredCSVLoader
 from langchain.document_loaders.cube_semantic import CubeSemanticLoader
 from langchain.document_loaders.datadog_logs import DatadogLogsLoader
@@ -242,6 +243,7 @@ __all__ = [
     "CollegeConfidentialLoader",
     "ConcurrentLoader",
     "ConfluenceLoader",
+    "CrateDBLoader",
     "CubeSemanticLoader",
     "DataFrameLoader",
     "DatadogLogsLoader",
