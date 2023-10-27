@@ -14,7 +14,10 @@ from sqlalchemy.orm import Session
 
 from langchain.docstore.document import Document
 from langchain.vectorstores.cratedb import BaseModel, CrateDBVectorSearch
-from tests.integration_tests.vectorstores.fake_embeddings import FakeEmbeddings
+from tests.integration_tests.vectorstores.fake_embeddings import (
+    ConsistentFakeEmbeddings,
+    FakeEmbeddings,
+)
 
 CONNECTION_STRING = CrateDBVectorSearch.connection_string_from_db_params(
     driver=os.environ.get("TEST_CRATEDB_DRIVER", "crate"),
@@ -38,6 +41,13 @@ def engine() -> sa.Engine:
     Return an SQLAlchemy engine object.
     """
     return sa.create_engine(CONNECTION_STRING, echo=False)
+
+
+@pytest.fixture
+def session(engine) -> sa.orm.Session:
+    with engine.connect() as conn:
+        with Session(conn) as session:
+            yield session
 
 
 @pytest.fixture(autouse=True)
@@ -89,6 +99,46 @@ def decode_output(
     return documents, scores
 
 
+def ensure_collection(session: sa.orm.Session, name: str):
+    """
+    Create a (fake) collection item.
+    """
+    session.execute(
+        sa.text(
+            f"""
+            CREATE TABLE IF NOT EXISTS collection (
+                uuid TEXT,
+                name TEXT,
+                cmetadata OBJECT
+            );
+            """
+        )
+    )
+    session.execute(
+        sa.text(
+            f"""
+            CREATE TABLE IF NOT EXISTS embedding (
+                uuid TEXT,
+                collection_id TEXT,
+                embedding FLOAT_VECTOR(123),
+                document TEXT,
+                cmetadata OBJECT,
+                custom_id TEXT
+            );
+            """
+        )
+    )
+    try:
+        session.execute(
+            sa.text(
+                f"INSERT INTO collection (uuid, name, cmetadata) VALUES ('uuid-{name}', '{name}', {{}});"
+            )
+        )
+        session.execute(sa.text("REFRESH TABLE collection"))
+    except sa.exc.IntegrityError:
+        pass
+
+
 class FakeEmbeddingsWithAdaDimension(FakeEmbeddings):
     """Fake embeddings functionality for testing."""
 
@@ -101,6 +151,19 @@ class FakeEmbeddingsWithAdaDimension(FakeEmbeddings):
     def embed_query(self, text: str) -> List[float]:
         """Return simple embeddings."""
         return [float(1.0)] * (ADA_TOKEN_COUNT - 1) + [float(0.0)]
+
+
+class ConsistentFakeEmbeddingsWithAdaDimension(
+    FakeEmbeddingsWithAdaDimension, ConsistentFakeEmbeddings
+):
+    """
+    Fake embeddings which remember all the texts seen so far to return consistent
+    vectors for the same texts.
+
+    Other than this, they also have a dimensionality, which is important in this case.
+    """
+
+    pass
 
 
 def test_cratedb_texts() -> None:
@@ -272,6 +335,36 @@ def test_cratedb_collection_no_embedding_dimension() -> None:
     assert ex.match(
         "Collection can't be accessed without specifying dimension size of embedding vectors"
     )
+
+
+def test_cratedb_collection_read_only(session) -> None:
+    """
+    Test using a collection, without adding any embeddings upfront.
+
+    This happens when just invoking the "retrieval" case.
+
+    In this scenario, embedding dimensionality needs to be figured out
+    from the supplied `embedding_function`.
+    """
+
+    # Create a fake collection item.
+    ensure_collection(session, "baz2")
+
+    # This test case needs an embedding _with_ dimensionality.
+    # Otherwise, the data access layer is unable to figure it
+    # out at runtime.
+    embedding = ConsistentFakeEmbeddingsWithAdaDimension()
+
+    vectorstore = CrateDBVectorSearch(
+        collection_name="baz2",
+        connection_string=CONNECTION_STRING,
+        embedding_function=embedding,
+    )
+    output = vectorstore.similarity_search("foo", k=1)
+
+    # No documents/embeddings have been loaded, the collection is empty.
+    # This is why there are also no results.
+    assert output == []
 
 
 def test_cratedb_with_filter_in_set() -> None:
