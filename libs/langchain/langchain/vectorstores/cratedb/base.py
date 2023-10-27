@@ -157,6 +157,8 @@ class CrateDBVectorSearch(PGVector):
             metadatas: List of metadatas associated with the texts.
             kwargs: vectorstore specific parameters
         """
+        if not embeddings:
+            return []
         self._init_models(embeddings[0])
         if self.pre_delete_collection:
             self.delete_collection()
