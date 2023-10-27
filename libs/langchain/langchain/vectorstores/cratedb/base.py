@@ -112,8 +112,25 @@ class CrateDBVectorSearch(PGVector):
         # TODO: See what can be improved here.
         polyfill_refresh_after_dml(self.Session)
 
+        # Need to defer initialization, because dimension size
+        # can only be figured out at runtime.
         self.CollectionStore = None
         self.EmbeddingStore = None
+
+    def _init_models(self, embedding: List[float]):
+        """
+        Create SQLAlchemy models at runtime, when not established yet.
+        """
+        if self.CollectionStore is not None and self.EmbeddingStore is not None:
+            return
+
+        size = len(embedding)
+        self._init_models_with_dimensionality(size=size)
+
+    def _init_models_with_dimensionality(self, size: int):
+        from langchain.vectorstores.cratedb.model import model_factory
+
+        self.CollectionStore, self.EmbeddingStore = model_factory(dimensions=size)
 
     def get_collection(
         self, session: sqlalchemy.orm.Session
@@ -140,10 +157,7 @@ class CrateDBVectorSearch(PGVector):
             metadatas: List of metadatas associated with the texts.
             kwargs: vectorstore specific parameters
         """
-        from langchain.vectorstores.cratedb.model import model_factory
-
-        dimensions = len(embeddings[0])
-        self.CollectionStore, self.EmbeddingStore = model_factory(dimensions=dimensions)
+        self._init_models(embeddings[0])
         if self.pre_delete_collection:
             self.delete_collection()
         self.create_tables_if_not_exists()
@@ -223,6 +237,7 @@ class CrateDBVectorSearch(PGVector):
         filter: Optional[Dict[str, str]] = None,
     ) -> List[Any]:
         """Query the collection."""
+        self._init_models(embedding)
         with self.Session() as session:
             collection = self.get_collection(session)
             if not collection:
