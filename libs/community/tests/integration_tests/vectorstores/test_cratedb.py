@@ -299,6 +299,52 @@ def test_cratedb_with_filter_no_match() -> None:
     assert output == []
 
 
+def test_cratedb_collection_delete() -> None:
+    """
+    Test end to end collection construction and deletion.
+    Uses two different collections of embeddings.
+    """
+
+    store_foo = CrateDBVectorSearch.from_texts(
+        texts=["foo"],
+        collection_name="test_collection_foo",
+        collection_metadata={"category": "foo"},
+        embedding=FakeEmbeddingsWithAdaDimension(),
+        metadatas=[{"document": "foo"}],
+        connection_string=CONNECTION_STRING,
+        pre_delete_collection=True,
+    )
+    store_bar = CrateDBVectorSearch.from_texts(
+        texts=["bar"],
+        collection_name="test_collection_bar",
+        collection_metadata={"category": "bar"},
+        embedding=FakeEmbeddingsWithAdaDimension(),
+        metadatas=[{"document": "bar"}],
+        connection_string=CONNECTION_STRING,
+        pre_delete_collection=True,
+    )
+    session = store_foo.Session()
+
+    # Verify data in database.
+    collection_foo = store_foo.get_collection(session)
+    collection_bar = store_bar.get_collection(session)
+    assert collection_foo.embeddings[0].cmetadata == {"document": "foo"}
+    assert collection_bar.embeddings[0].cmetadata == {"document": "bar"}
+
+    # Delete first collection.
+    store_foo.delete_collection()
+
+    # Verify that the "foo" collection has been deleted.
+    collection_foo = store_foo.get_collection(session)
+    collection_bar = store_bar.get_collection(session)
+    assert collection_foo is None
+    assert collection_bar.embeddings[0].cmetadata == {"document": "bar"}
+
+    # Verify that associated embeddings also have been deleted.
+    embeddings_count = session.query(store_foo.EmbeddingStore).count()
+    assert embeddings_count == 1
+
+
 def test_cratedb_collection_with_metadata() -> None:
     """Test end to end collection construction"""
     texts = ["foo", "bar", "baz"]

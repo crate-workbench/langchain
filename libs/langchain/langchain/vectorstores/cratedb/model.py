@@ -45,7 +45,8 @@ class ModelFactory:
             embeddings = relationship(
                 "EmbeddingStore",
                 back_populates="collection",
-                passive_deletes=True,
+                cascade="all, delete-orphan",
+                passive_deletes=False,
             )
 
             @classmethod
