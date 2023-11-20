@@ -5,7 +5,7 @@ cd tests/integration_tests/vectorstores/docker-compose
 docker-compose -f cratedb.yml up
 """
 import os
-from typing import List, Tuple
+from typing import Generator, List, Tuple
 
 import pytest
 import sqlalchemy as sa
@@ -13,7 +13,8 @@ from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.orm import Session
 
 from langchain.docstore.document import Document
-from langchain.vectorstores.cratedb import BaseModel, CrateDBVectorSearch
+from langchain.vectorstores.cratedb import CrateDBVectorSearch
+from langchain.vectorstores.cratedb.model import ModelFactory
 from tests.integration_tests.vectorstores.fake_embeddings import (
     ConsistentFakeEmbeddings,
     FakeEmbeddings,
@@ -44,7 +45,7 @@ def engine() -> sa.Engine:
 
 
 @pytest.fixture
-def session(engine) -> sa.orm.Session:
+def session(engine: sa.Engine) -> Generator[sa.orm.Session, None, None]:
     with engine.connect() as conn:
         with Session(conn) as session:
             yield session
@@ -56,7 +57,8 @@ def drop_tables(engine: sa.Engine) -> None:
     Drop database tables.
     """
     try:
-        BaseModel.metadata.drop_all(engine, checkfirst=False)
+        mf = ModelFactory()
+        mf.BaseModel.metadata.drop_all(engine, checkfirst=False)
     except Exception as ex:
         if "RelationUnknown" not in str(ex):
             raise
@@ -69,18 +71,13 @@ def prune_tables(engine: sa.Engine) -> None:
     """
     with engine.connect() as conn:
         with Session(conn) as session:
-            from langchain.vectorstores.cratedb.model import model_factory
-
-            # While it does not have any function here, you will still need to supply a
-            # dummy dimension size value for deleting records from tables.
-            CollectionStore, EmbeddingStore = model_factory(dimensions=1024)
-
+            mf = ModelFactory()
             try:
-                session.query(CollectionStore).delete()
+                session.query(mf.CollectionStore).delete()
             except ProgrammingError:
                 pass
             try:
-                session.query(EmbeddingStore).delete()
+                session.query(mf.EmbeddingStore).delete()
             except ProgrammingError:
                 pass
 
@@ -99,13 +96,13 @@ def decode_output(
     return documents, scores
 
 
-def ensure_collection(session: sa.orm.Session, name: str):
+def ensure_collection(session: sa.orm.Session, name: str) -> None:
     """
     Create a (fake) collection item.
     """
     session.execute(
         sa.text(
-            f"""
+            """
             CREATE TABLE IF NOT EXISTS collection (
                 uuid TEXT,
                 name TEXT,
@@ -116,7 +113,7 @@ def ensure_collection(session: sa.orm.Session, name: str):
     )
     session.execute(
         sa.text(
-            f"""
+            """
             CREATE TABLE IF NOT EXISTS embedding (
                 uuid TEXT,
                 collection_id TEXT,
@@ -131,7 +128,8 @@ def ensure_collection(session: sa.orm.Session, name: str):
     try:
         session.execute(
             sa.text(
-                f"INSERT INTO collection (uuid, name, cmetadata) VALUES ('uuid-{name}', '{name}', {{}});"
+                f"INSERT INTO collection (uuid, name, cmetadata) "
+                f"VALUES ('uuid-{name}', '{name}', {{}});"
             )
         )
         session.execute(sa.text("REFRESH TABLE collection"))
@@ -325,7 +323,7 @@ def test_cratedb_collection_with_metadata() -> None:
 def test_cratedb_collection_no_embedding_dimension() -> None:
     """Test end to end collection construction"""
     cratedb_vector = CrateDBVectorSearch(
-        embedding_function=None,
+        embedding_function=None,  # type: ignore[arg-type]
         connection_string=CONNECTION_STRING,
         pre_delete_collection=True,
     )
@@ -333,11 +331,12 @@ def test_cratedb_collection_no_embedding_dimension() -> None:
     with pytest.raises(RuntimeError) as ex:
         cratedb_vector.get_collection(session)
     assert ex.match(
-        "Collection can't be accessed without specifying dimension size of embedding vectors"
+        "Collection can't be accessed without specifying "
+        "dimension size of embedding vectors"
     )
 
 
-def test_cratedb_collection_read_only(session) -> None:
+def test_cratedb_collection_read_only(session: Session) -> None:
     """
     Test using a collection, without adding any embeddings upfront.
 
