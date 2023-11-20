@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import enum
 import math
-import uuid
 from typing import (
     Any,
     Callable,
@@ -20,11 +19,12 @@ from cratedb_toolkit.sqlalchemy.polyfill import (
     polyfill_refresh_after_dml,
     refresh_table,
 )
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
 from langchain.docstore.document import Document
-from langchain.embeddings.base import Embeddings
+from langchain.schema.embeddings import Embeddings
 from langchain.utils import get_from_dict_or_env
+from langchain.vectorstores.cratedb.model import ModelFactory
 from langchain.vectorstores.pgvector import PGVector
 
 
@@ -38,21 +38,8 @@ class DistanceStrategy(str, enum.Enum):
 
 DEFAULT_DISTANCE_STRATEGY = DistanceStrategy.EUCLIDEAN
 
-Base = declarative_base()  # type: Any
-# Base = declarative_base(metadata=MetaData(schema="langchain"))  # type: Any
 
 _LANGCHAIN_DEFAULT_COLLECTION_NAME = "langchain"
-
-
-def generate_uuid() -> str:
-    return str(uuid.uuid4())
-
-
-class BaseModel(Base):
-    """Base model for the SQL stores."""
-
-    __abstract__ = True
-    uuid = sqlalchemy.Column(sqlalchemy.String, primary_key=True, default=generate_uuid)
 
 
 def _results_to_docs(docs_and_scores: Any) -> List[Document]:
@@ -114,30 +101,47 @@ class CrateDBVectorSearch(PGVector):
 
         # Need to defer initialization, because dimension size
         # can only be figured out at runtime.
-        self.CollectionStore = None
-        self.EmbeddingStore = None
+        self.BaseModel = None
+        self.CollectionStore = None  # type: ignore[assignment]
+        self.EmbeddingStore = None  # type: ignore[assignment]
 
-    def _init_models(self, embedding: List[float]):
+    def __del__(self) -> None:
+        """
+        Work around premature session close.
+
+        sqlalchemy.orm.exc.DetachedInstanceError: Parent instance <CollectionStore at 0x1212ca3d0> is not bound
+        to a Session; lazy load operation of attribute 'embeddings' cannot proceed.
+        -- https://docs.sqlalchemy.org/en/20/errors.html#error-bhk3
+
+        TODO: Review!
+        """  # noqa: E501
+        pass
+
+    def _init_models(self, embedding: List[float]) -> None:
         """
         Create SQLAlchemy models at runtime, when not established yet.
         """
+
+        # TODO: Use a better way to run this only once.
         if self.CollectionStore is not None and self.EmbeddingStore is not None:
             return
 
         size = len(embedding)
         self._init_models_with_dimensionality(size=size)
 
-    def _init_models_with_dimensionality(self, size: int):
-        from langchain.vectorstores.cratedb.model import model_factory
+    def _init_models_with_dimensionality(self, size: int) -> None:
+        mf = ModelFactory(dimensions=size)
+        self.BaseModel, self.CollectionStore, self.EmbeddingStore = (
+            mf.BaseModel,  # type: ignore[assignment]
+            mf.CollectionStore,
+            mf.EmbeddingStore,
+        )
 
-        self.CollectionStore, self.EmbeddingStore = model_factory(dimensions=size)
-
-    def get_collection(
-        self, session: sqlalchemy.orm.Session
-    ) -> Optional["CollectionStore"]:
+    def get_collection(self, session: sqlalchemy.orm.Session) -> Any:
         if self.CollectionStore is None:
             raise RuntimeError(
-                "Collection can't be accessed without specifying dimension size of embedding vectors"
+                "Collection can't be accessed without specifying "
+                "dimension size of embedding vectors"
             )
         return self.CollectionStore.get_by_name(session, self.collection_name)
 
@@ -170,15 +174,17 @@ class CrateDBVectorSearch(PGVector):
 
     def create_tables_if_not_exists(self) -> None:
         """
-        Need to overwrite because `Base` is different from upstream.
+        Need to overwrite because this `Base` is different from parent's `Base`.
         """
-        Base.metadata.create_all(self._engine)
+        mf = ModelFactory()
+        mf.Base.metadata.create_all(self._engine)
 
     def drop_tables(self) -> None:
         """
-        Need to overwrite because `Base` is different from upstream.
+        Need to overwrite because this `Base` is different from parent's `Base`.
         """
-        Base.metadata.drop_all(self._engine)
+        mf = ModelFactory()
+        mf.Base.metadata.drop_all(self._engine)
 
     def delete(
         self,
