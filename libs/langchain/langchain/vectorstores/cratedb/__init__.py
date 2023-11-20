@@ -1,6 +1,5 @@
-from .base import BaseModel, CrateDBVectorSearch
+from .base import CrateDBVectorSearch
 
 __all__ = [
-    "BaseModel",
     "CrateDBVectorSearch",
 ]
