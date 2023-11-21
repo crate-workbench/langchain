@@ -182,9 +182,11 @@ class CrateDBVectorSearch(PGVector):
         self.create_collection()
 
         # After setting up the table/collection at runtime, add embeddings.
-        return super().add_embeddings(
+        embedding_ids = super().add_embeddings(
             texts=texts, embeddings=embeddings, metadatas=metadatas, ids=ids, **kwargs
         )
+        refresh_table(self.Session(), self.EmbeddingStore)
+        return embedding_ids
 
     def create_tables_if_not_exists(self) -> None:
         """
