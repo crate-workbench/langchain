@@ -50,30 +50,14 @@ class ModelFactory:
             )
 
             @classmethod
-            def get_by_name(
-                cls, session: Session, name: str
-            ) -> Optional["CollectionStore"]:
-                try:
-                    return (
-                        session.query(cls).filter(cls.name == name).first()  # type: ignore[attr-defined]  # noqa: E501
-                    )
-                except sqlalchemy.exc.ProgrammingError as ex:
-                    if "RelationUnknown" not in str(ex):
-                        raise
-                return None
+            def get_by_name(cls, session: Session, name: str) -> "CollectionStore":
+                return session.query(cls).filter(cls.name == name).first()  # type: ignore[attr-defined]
 
             @classmethod
             def get_by_names(
                 cls, session: Session, names: List[str]
-            ) -> Optional["List[CollectionStore]"]:
-                try:
-                    return (
-                        session.query(cls).filter(cls.name.in_(names)).all()  # type: ignore[attr-defined]  # noqa: E501
-                    )
-                except sqlalchemy.exc.ProgrammingError as ex:
-                    if "RelationUnknown" not in str(ex):
-                        raise
-                return None
+            ) -> List["CollectionStore"]:
+                return session.query(cls).filter(cls.name.in_(names)).all()  # type: ignore[attr-defined]
 
             @classmethod
             def get_or_create(
