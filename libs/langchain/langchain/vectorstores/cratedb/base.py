@@ -164,10 +164,24 @@ class CrateDBVectorSearch(PGVector):
         if not embeddings:
             return []
         self._init_models(embeddings[0])
+
+        # When the user requested to delete the collection before running subsequent
+        # operations on it, run the deletion gracefully if the table does not exist
+        # yet.
         if self.pre_delete_collection:
-            self.delete_collection()
+            try:
+                self.delete_collection()
+            except sqlalchemy.exc.ProgrammingError as ex:
+                if "RelationUnknown" not in str(ex):
+                    raise
+
+        # Tables need to be created at runtime, because the `EmbeddingStore.embedding`
+        # field, a `FloatVector`, needs to be initialized with a dimensionality
+        # parameter, which is only obtained at runtime.
         self.create_tables_if_not_exists()
         self.create_collection()
+
+        # After setting up the table/collection at runtime, add embeddings.
         return super().add_embeddings(
             texts=texts, embeddings=embeddings, metadatas=metadatas, ids=ids, **kwargs
         )
@@ -414,7 +428,7 @@ class CrateDBVectorSearch(PGVector):
         else:
             raise ValueError(
                 "No supported normalization function for distance_strategy of "
-                "{self._distance_strategy}. Consider providing relevance_score_fn to "
+                f"{self._distance_strategy}. Consider providing relevance_score_fn to "
                 "CrateDBVectorSearch constructor."
             )
 
