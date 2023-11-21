@@ -5,6 +5,7 @@ cd tests/integration_tests/vectorstores/docker-compose
 docker-compose -f cratedb.yml up
 """
 import os
+import re
 from typing import Dict, Generator, List, Tuple
 
 import pytest
@@ -324,6 +325,8 @@ def test_cratedb_collection_delete() -> None:
     # Verify data in database.
     collection_foo = store_foo.get_collection(session)
     collection_bar = store_bar.get_collection(session)
+    if collection_foo is None or collection_bar is None:
+        assert False, "Expected CollectionStore objects but received None"
     assert collection_foo.embeddings[0].cmetadata == {"document": "foo"}
     assert collection_bar.embeddings[0].cmetadata == {"document": "bar"}
 
@@ -333,6 +336,8 @@ def test_cratedb_collection_delete() -> None:
     # Verify that the "foo" collection has been deleted.
     collection_foo = store_foo.get_collection(session)
     collection_bar = store_bar.get_collection(session)
+    if collection_bar is None:
+        assert False, "Expected CollectionStore object but received None"
     assert collection_foo is None
     assert collection_bar.embeddings[0].cmetadata == {"document": "bar"}
 
@@ -628,11 +633,35 @@ def test_cratedb_multicollection_fail_indexing_not_permitted() -> None:
     assert ex.match("This adapter can not be used for indexing documents")
 
 
-def test_cratedb_multicollection_search_no_collections() -> None:
+def test_cratedb_multicollection_search_table_does_not_exist() -> None:
+    """
+    `CrateDBVectorSearchMultiCollection` will fail when the `collection`
+    table does not exist.
+    """
+
+    store = CrateDBVectorSearchMultiCollection(
+        collection_names=["unknown"],
+        embedding_function=ConsistentFakeEmbeddingsWithAdaDimension(),
+        connection_string=CONNECTION_STRING,
+    )
+    with pytest.raises(ProgrammingError) as ex:
+        store.similarity_search("foo")
+    assert ex.match(re.escape("RelationUnknown[Relation 'collection' unknown]"))
+
+
+def test_cratedb_multicollection_search_unknown_collection() -> None:
     """
     `CrateDBVectorSearchMultiCollection` will fail when not able to identify
     collections to search in.
     """
+
+    CrateDBVectorSearch.from_texts(
+        texts=["Räuber", "Hotzenplotz"],
+        collection_name="test_collection",
+        embedding=ConsistentFakeEmbeddingsWithAdaDimension(),
+        connection_string=CONNECTION_STRING,
+        pre_delete_collection=True,
+    )
 
     store = CrateDBVectorSearchMultiCollection(
         collection_names=["unknown"],
