@@ -199,7 +199,7 @@ class SQLRecordManager(RecordManager):
             # in a day (24 hours * 60 minutes * 60 seconds)
             if self.dialect == "sqlite":
                 query = text("SELECT (julianday('now') - 2440587.5) * 86400.0;")
-            elif self.dialect == "postgresql":
+            elif self.dialect in ["crate", "postgresql"]:
                 query = text("SELECT EXTRACT (EPOCH FROM CURRENT_TIMESTAMP);")
             else:
                 raise NotImplementedError(f"Not implemented for dialect {self.dialect}")
@@ -283,7 +283,7 @@ class SQLRecordManager(RecordManager):
         ]
 
         with self._make_session() as session:
-            if self.dialect == "sqlite":
+            if self.dialect in ["crate", "sqlite"]:
                 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
                 # Note: uses SQLite insert to make on_conflict_do_update work.
