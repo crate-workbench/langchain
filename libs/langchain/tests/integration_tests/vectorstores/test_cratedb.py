@@ -5,15 +5,17 @@ cd tests/integration_tests/vectorstores/docker-compose
 docker-compose -f cratedb.yml up
 """
 import os
-from typing import Generator, List, Tuple
+from typing import Dict, Generator, List, Tuple
 
 import pytest
 import sqlalchemy as sa
+import sqlalchemy.orm
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.orm import Session
 
 from langchain.docstore.document import Document
 from langchain.vectorstores.cratedb import CrateDBVectorSearch
+from langchain.vectorstores.cratedb.extended import CrateDBVectorSearchMultiCollection
 from langchain.vectorstores.cratedb.model import ModelFactory
 from tests.integration_tests.vectorstores.fake_embeddings import (
     ConsistentFakeEmbeddings,
@@ -151,17 +153,17 @@ class FakeEmbeddingsWithAdaDimension(FakeEmbeddings):
         return [float(1.0)] * (ADA_TOKEN_COUNT - 1) + [float(0.0)]
 
 
-class ConsistentFakeEmbeddingsWithAdaDimension(
-    FakeEmbeddingsWithAdaDimension, ConsistentFakeEmbeddings
-):
+class ConsistentFakeEmbeddingsWithAdaDimension(ConsistentFakeEmbeddings):
     """
-    Fake embeddings which remember all the texts seen so far to return consistent
-    vectors for the same texts.
+    Fake embeddings which remember all the texts seen so far to return
+    consistent vectors for the same texts.
 
-    Other than this, they also have a dimensionality, which is important in this case.
+    Other than this, they also have a fixed dimensionality, which is
+    important in this case.
     """
 
-    pass
+    def __init__(self, *args: List, **kwargs: Dict) -> None:
+        super().__init__(dimensionality=ADA_TOKEN_COUNT)
 
 
 def test_cratedb_texts() -> None:
@@ -223,12 +225,7 @@ def test_cratedb_with_metadatas_with_scores() -> None:
         pre_delete_collection=True,
     )
     output = docsearch.similarity_search_with_score("foo", k=1)
-    # TODO: Original:
-    #       assert output == [(Document(page_content="foo", metadata={"page": "0"}), 0.0)]  # noqa: E501
-    assert output in [
-        [(Document(page_content="foo", metadata={"page": "0"}), 1.0828735)],
-        [(Document(page_content="foo", metadata={"page": "0"}), 1.1307646)],
-    ]
+    assert output == [(Document(page_content="foo", metadata={"page": "0"}), 2.0)]
 
 
 def test_cratedb_with_filter_match() -> None:
@@ -247,9 +244,8 @@ def test_cratedb_with_filter_match() -> None:
     # TODO: Original:
     #       assert output == [(Document(page_content="foo", metadata={"page": "0"}), 0.0)]  # noqa: E501
     assert output in [
-        [(Document(page_content="foo", metadata={"page": "0"}), 1.2615292)],
-        [(Document(page_content="foo", metadata={"page": "0"}), 1.3979403)],
-        [(Document(page_content="foo", metadata={"page": "0"}), 1.5065275)],
+        [(Document(page_content="foo", metadata={"page": "0"}), 2.1307645)],
+        [(Document(page_content="foo", metadata={"page": "0"}), 2.3150668)],
     ]
 
 
@@ -265,10 +261,9 @@ def test_cratedb_with_filter_distant_match() -> None:
         connection_string=CONNECTION_STRING,
         pre_delete_collection=True,
     )
+    output = docsearch.similarity_search_with_score("foo", k=2, filter={"page": "2"})
     # TODO: Original:
-    # output = docsearch.similarity_search_with_score("foo", k=1, filter={"page": "2"})
-    output = docsearch.similarity_search_with_score("foo", k=3, filter={"page": "2"})
-    # TODO: Original:
+    #       output = docsearch.similarity_search_with_score("foo", k=1, filter={"page": "2"})  # noqa: E501
     #       assert output == [
     #         (Document(page_content="baz", metadata={"page": "2"}), 0.0013003906671379406)  # noqa: E501
     #       ]
@@ -277,9 +272,10 @@ def test_cratedb_with_filter_distant_match() -> None:
         Document(page_content="baz", metadata={"page": "2"}),
     ]
     assert scores in [
-        [0.5],
-        [0.6],
-        [0.7],
+        [1.3],
+        [1.5],
+        [1.6],
+        [1.7],
     ]
 
 
@@ -439,7 +435,7 @@ def test_cratedb_with_filter_in_set() -> None:
         Document(page_content="foo", metadata={"page": "0"}),
         Document(page_content="baz", metadata={"page": "2"}),
     ]
-    assert scores == [2.1, 1.3]
+    assert scores == [3.0, 2.2]
 
 
 def test_cratedb_delete_docs() -> None:
@@ -498,7 +494,7 @@ def test_cratedb_relevance_score() -> None:
         Document(page_content="bar", metadata={"page": "1"}),
         Document(page_content="baz", metadata={"page": "2"}),
     ]
-    assert scores == [0.8, 0.4, 0.2]
+    assert scores == [1.4, 1.1, 0.8]
 
 
 def test_cratedb_retriever_search_threshold() -> None:
@@ -516,9 +512,7 @@ def test_cratedb_retriever_search_threshold() -> None:
 
     retriever = docsearch.as_retriever(
         search_type="similarity_score_threshold",
-        # TODO: Original:
-        #       search_kwargs={"k": 3, "score_threshold": 0.999},
-        search_kwargs={"k": 3, "score_threshold": 0.333},
+        search_kwargs={"k": 3, "score_threshold": 0.999},
     )
     output = retriever.get_relevant_documents("summer")
     assert output == [
@@ -574,10 +568,77 @@ def test_cratedb_max_marginal_relevance_search_with_score() -> None:
         pre_delete_collection=True,
     )
     output = docsearch.max_marginal_relevance_search_with_score("foo", k=1, fetch_k=3)
-    # TODO: Original:
-    #       assert output == [(Document(page_content="foo"), 0.0)]
-    assert output in [
-        [(Document(page_content="foo"), 1.0606961)],
-        [(Document(page_content="foo"), 1.0828735)],
-        [(Document(page_content="foo"), 1.1307646)],
-    ]
+    assert output == [(Document(page_content="foo"), 2.0)]
+
+
+def test_cratedb_multicollection_search_success() -> None:
+    """
+    `CrateDBVectorSearchMultiCollection` provides functionality for
+    searching multiple collections.
+    """
+
+    store_1 = CrateDBVectorSearch.from_texts(
+        texts=["Räuber", "Hotzenplotz"],
+        collection_name="test_collection_1",
+        embedding=ConsistentFakeEmbeddingsWithAdaDimension(),
+        connection_string=CONNECTION_STRING,
+        pre_delete_collection=True,
+    )
+    _ = CrateDBVectorSearch.from_texts(
+        texts=["John", "Doe"],
+        collection_name="test_collection_2",
+        embedding=ConsistentFakeEmbeddingsWithAdaDimension(),
+        connection_string=CONNECTION_STRING,
+        pre_delete_collection=True,
+    )
+
+    # Probe the first store.
+    output = store_1.similarity_search("Räuber", k=1)
+    assert Document(page_content="Räuber") in output[:2]
+    output = store_1.similarity_search("Hotzenplotz", k=1)
+    assert Document(page_content="Hotzenplotz") in output[:2]
+    output = store_1.similarity_search("John Doe", k=1)
+    assert Document(page_content="Räuber") in output[:2]
+
+    # Probe the multi-store.
+    multisearch = CrateDBVectorSearchMultiCollection(
+        collection_names=["test_collection_1", "test_collection_2"],
+        embedding_function=ConsistentFakeEmbeddingsWithAdaDimension(),
+        connection_string=CONNECTION_STRING,
+    )
+    output = multisearch.similarity_search("Räuber Hotzenplotz", k=2)
+    assert Document(page_content="Räuber") in output[:2]
+    output = multisearch.similarity_search("John Doe", k=2)
+    assert Document(page_content="John") in output[:2]
+
+
+def test_cratedb_multicollection_fail_indexing_not_permitted() -> None:
+    """
+    `CrateDBVectorSearchMultiCollection` does not provide functionality for
+    indexing documents.
+    """
+
+    with pytest.raises(NotImplementedError) as ex:
+        CrateDBVectorSearchMultiCollection.from_texts(
+            texts=["foo"],
+            collection_name="test_collection",
+            embedding=FakeEmbeddingsWithAdaDimension(),
+            connection_string=CONNECTION_STRING,
+        )
+    assert ex.match("This adapter can not be used for indexing documents")
+
+
+def test_cratedb_multicollection_search_no_collections() -> None:
+    """
+    `CrateDBVectorSearchMultiCollection` will fail when not able to identify
+    collections to search in.
+    """
+
+    store = CrateDBVectorSearchMultiCollection(
+        collection_names=["unknown"],
+        embedding_function=ConsistentFakeEmbeddingsWithAdaDimension(),
+        connection_string=CONNECTION_STRING,
+    )
+    with pytest.raises(ValueError) as ex:
+        store.similarity_search("foo")
+    assert ex.match("No collections found")

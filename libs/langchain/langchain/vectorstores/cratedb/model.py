@@ -1,5 +1,5 @@
 import uuid
-from typing import Any, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import sqlalchemy
 from crate.client.sqlalchemy.types import ObjectType
@@ -56,6 +56,19 @@ class ModelFactory:
                 try:
                     return (
                         session.query(cls).filter(cls.name == name).first()  # type: ignore[attr-defined]  # noqa: E501
+                    )
+                except sqlalchemy.exc.ProgrammingError as ex:
+                    if "RelationUnknown" not in str(ex):
+                        raise
+                return None
+
+            @classmethod
+            def get_by_names(
+                cls, session: Session, names: List[str]
+            ) -> Optional["List[CollectionStore]"]:
+                try:
+                    return (
+                        session.query(cls).filter(cls.name.in_(names)).all()  # type: ignore[attr-defined]  # noqa: E501
                     )
                 except sqlalchemy.exc.ProgrammingError as ex:
                     if "RelationUnknown" not in str(ex):
