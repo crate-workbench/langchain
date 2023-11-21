@@ -368,11 +368,12 @@ def test_cratedb_collection_with_metadata() -> None:
 
 
 def test_cratedb_collection_no_embedding_dimension() -> None:
-    """Test end to end collection construction"""
+    """
+    Verify that addressing collections fails when not specifying dimensions.
+    """
     cratedb_vector = CrateDBVectorSearch(
         embedding_function=None,  # type: ignore[arg-type]
         connection_string=CONNECTION_STRING,
-        pre_delete_collection=True,
     )
     session = Session(cratedb_vector.connect())
     with pytest.raises(RuntimeError) as ex:
@@ -671,3 +672,20 @@ def test_cratedb_multicollection_search_unknown_collection() -> None:
     with pytest.raises(ValueError) as ex:
         store.similarity_search("foo")
     assert ex.match("No collections found")
+
+
+def test_cratedb_multicollection_no_embedding_dimension() -> None:
+    """
+    Verify that addressing collections fails when not specifying dimensions.
+    """
+    store = CrateDBVectorSearchMultiCollection(
+        embedding_function=None,  # type: ignore[arg-type]
+        connection_string=CONNECTION_STRING,
+    )
+    session = Session(store.connect())
+    with pytest.raises(RuntimeError) as ex:
+        store.get_collection(session)
+    assert ex.match(
+        "Collection can't be accessed without specifying "
+        "dimension size of embedding vectors"
+    )
