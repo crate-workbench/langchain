@@ -250,8 +250,26 @@ class CrateDBVectorSearch(PGVector):
             collection = self.get_collection(session)
             if not collection:
                 raise ValueError("Collection not found")
+            return self._query_collection_multi(
+                collections=[collection], embedding=embedding, k=k, filter=filter
+            )
 
-            filter_by = self.EmbeddingStore.collection_id == collection.uuid
+    def _query_collection_multi(
+        self,
+        collections: List[Any],
+        embedding: List[float],
+        k: int = 4,
+        filter: Optional[Dict[str, str]] = None,
+    ) -> List[Any]:
+        """Query the collection."""
+        self._init_models(embedding)
+
+        collection_names = [coll.name for coll in collections]
+        collection_uuids = [coll.uuid for coll in collections]
+        self.logger.info(f"Querying collections: {collection_names}")
+
+        with self.Session() as session:
+            filter_by = self.EmbeddingStore.collection_id.in_(collection_uuids)
 
             if filter is not None:
                 filter_clauses = []
@@ -271,7 +289,7 @@ class CrateDBVectorSearch(PGVector):
                         )  # type: ignore[assignment]
                         filter_clauses.append(filter_by_metadata)
 
-                filter_by = sqlalchemy.and_(filter_by, *filter_clauses)
+                filter_by = sqlalchemy.and_(filter_by, *filter_clauses)  # type: ignore[assignment]
 
             _type = self.EmbeddingStore
 
