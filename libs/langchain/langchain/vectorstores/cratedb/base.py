@@ -192,8 +192,9 @@ class CrateDBVectorSearch(PGVector):
         """
         Need to overwrite because this `Base` is different from parent's `Base`.
         """
-        mf = ModelFactory()
-        mf.Base.metadata.create_all(self._engine)
+        if self.BaseModel is None:
+            raise RuntimeError("Storage models not initialized")
+        self.BaseModel.metadata.create_all(self._engine)
 
     def drop_tables(self) -> None:
         """
