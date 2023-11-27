@@ -23,20 +23,18 @@ from tests.integration_tests.vectorstores.fake_embeddings import (
     FakeEmbeddings,
 )
 
+SCHEMA_NAME = os.environ.get("TEST_CRATEDB_DATABASE", "testdrive")
+
 CONNECTION_STRING = CrateDBVectorSearch.connection_string_from_db_params(
     driver=os.environ.get("TEST_CRATEDB_DRIVER", "crate"),
     host=os.environ.get("TEST_CRATEDB_HOST", "localhost"),
     port=int(os.environ.get("TEST_CRATEDB_PORT", "4200")),
-    database=os.environ.get("TEST_CRATEDB_DATABASE", "testdrive"),
+    database=SCHEMA_NAME,
     user=os.environ.get("TEST_CRATEDB_USER", "crate"),
     password=os.environ.get("TEST_CRATEDB_PASSWORD", ""),
 )
 
-
-# TODO: Try 1536 after https://github.com/crate/crate/pull/14699.
-# ADA_TOKEN_COUNT = 14
-ADA_TOKEN_COUNT = 1024
-# ADA_TOKEN_COUNT = 1536
+ADA_TOKEN_COUNT = 1536
 
 
 @pytest.fixture
@@ -165,6 +163,25 @@ def test_cratedb_texts() -> None:
     )
     output = docsearch.similarity_search("foo", k=1)
     assert output == [Document(page_content="foo")]
+
+
+def test_cratedb_embedding_dimension() -> None:
+    """Verify the `embedding` column uses the correct vector dimensionality."""
+    texts = ["foo", "bar", "baz"]
+    docsearch = CrateDBVectorSearch.from_texts(
+        texts=texts,
+        collection_name="test_collection",
+        embedding=ConsistentFakeEmbeddingsWithAdaDimension(),
+        connection_string=CONNECTION_STRING,
+        pre_delete_collection=True,
+    )
+    with docsearch.Session() as session:
+        result = session.execute(sa.text(f"SHOW CREATE TABLE {SCHEMA_NAME}.embedding"))
+        record = result.first()
+        if not record:
+            raise ValueError("No data found")
+        ddl = record[0]
+        assert f'"embedding" FLOAT_VECTOR({ADA_TOKEN_COUNT})' in ddl
 
 
 def test_cratedb_embeddings() -> None:
