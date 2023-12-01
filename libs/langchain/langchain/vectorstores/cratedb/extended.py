@@ -15,6 +15,7 @@ from langchain.vectorstores.cratedb.base import (
     DEFAULT_DISTANCE_STRATEGY,
     CrateDBVectorSearch,
     DistanceStrategy,
+    StorageStrategy,
 )
 from langchain.vectorstores.pgvector import _LANGCHAIN_DEFAULT_COLLECTION_NAME
 
@@ -50,6 +51,16 @@ class CrateDBVectorSearchMultiCollection(CrateDBVectorSearch):
         connection: Optional[sqlalchemy.engine.Connection] = None,
         engine_args: Optional[dict[str, Any]] = None,
     ) -> None:
+        # Sanity checks.
+        # TODO: The CrateDBVectorSearchMultiCollection access variant needs further
+        #       adjustments to support the EMBEDDING_TABLE_PER_COLLECTION storage
+        #       strategy.
+        if self.STORAGE_STRATEGY is not StorageStrategy.LANGCHAIN_PGVECTOR:
+            raise NotImplementedError(
+                f"Multi-collection querying not supported "
+                f"by strategy: {self.STORAGE_STRATEGY}"
+            )
+
         self.connection_string = connection_string
         self.embedding_function = embedding_function
         self.collection_names = collection_names

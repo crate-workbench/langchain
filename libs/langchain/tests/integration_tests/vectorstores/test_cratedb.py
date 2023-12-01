@@ -6,16 +6,18 @@ docker-compose -f cratedb.yml up
 """
 import os
 import re
-from typing import Dict, Generator, List
+from typing import Dict, Generator, List, Tuple
 
 import pytest
 import sqlalchemy as sa
 import sqlalchemy.orm
+from pytest_mock import MockerFixture
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.orm import Session
 
 from langchain.docstore.document import Document
 from langchain.vectorstores.cratedb import CrateDBVectorSearch
+from langchain.vectorstores.cratedb.base import StorageStrategy
 from langchain.vectorstores.cratedb.extended import CrateDBVectorSearchMultiCollection
 from langchain.vectorstores.cratedb.model import ModelFactory
 from tests.integration_tests.vectorstores.fake_embeddings import (
@@ -55,20 +57,46 @@ def session(engine: sa.Engine) -> Generator[sa.orm.Session, None, None]:
 @pytest.fixture(autouse=True)
 def drop_tables(engine: sa.Engine) -> None:
     """
-    Drop database tables.
+    Drop relevant database tables before invoking each test case.
+
+    TODO: Check how only those database tables can be dropped, which
+          have actually been used, in order to increase performance.
+          Alternatively, reduce the number of different table names
+          used for testing.
     """
-    try:
-        mf = ModelFactory()
-        mf.BaseModel.metadata.drop_all(engine, checkfirst=False)
-    except Exception as ex:
-        if "RelationUnknown" not in str(ex):
-            raise
+
+    def sqlalchemy_drop_model(mf: ModelFactory) -> None:
+        try:
+            mf.BaseModel.metadata.drop_all(engine, checkfirst=False)
+        except Exception as ex:
+            if "RelationUnknown" not in str(ex):
+                raise
+
+    collection_name_candidates = [
+        "test_collection",
+        "test_collection_filter",
+        "test_collection_foo",
+        "test_collection_bar",
+        "test_collection_1",
+        "test_collection_2",
+    ]
+
+    # Recycling for vanilla storage strategy.
+    mf = ModelFactory(embedding_table="embedding")
+    sqlalchemy_drop_model(mf)
+
+    # Recycling for advanced "embedding-table-per-collection" storage strategy.
+    for collection_name in collection_name_candidates:
+        mf = ModelFactory(embedding_table=f"embedding_{collection_name}")
+        sqlalchemy_drop_model(mf)
 
 
 @pytest.fixture
 def prune_tables(engine: sa.Engine) -> None:
     """
     Delete data from database tables.
+
+    Note: This fixture is currently not used.
     """
     with engine.connect() as conn:
         with Session(conn) as session:
@@ -87,6 +115,12 @@ def ensure_collection(session: sa.orm.Session, name: str) -> None:
     """
     Create a (fake) collection item.
     """
+    embedding_table_name = "embedding"
+    if (
+        CrateDBVectorSearch.STORAGE_STRATEGY
+        is StorageStrategy.EMBEDDING_TABLE_PER_COLLECTION
+    ):
+        embedding_table_name = f"embedding_{name}"
     session.execute(
         sa.text(
             """
@@ -100,8 +134,8 @@ def ensure_collection(session: sa.orm.Session, name: str) -> None:
     )
     session.execute(
         sa.text(
-            """
-            CREATE TABLE IF NOT EXISTS embedding (
+            f"""
+            CREATE TABLE IF NOT EXISTS {embedding_table_name} (
                 uuid TEXT,
                 collection_id TEXT,
                 embedding FLOAT_VECTOR(123),
@@ -149,6 +183,33 @@ class ConsistentFakeEmbeddingsWithAdaDimension(ConsistentFakeEmbeddings):
 
     def __init__(self, *args: List, **kwargs: Dict) -> None:
         super().__init__(dimensionality=ADA_TOKEN_COUNT)
+
+
+@pytest.fixture
+def two_stores() -> Tuple[CrateDBVectorSearch, CrateDBVectorSearch]:
+    """
+    Provide two different vector search handles to test case functions,
+    associated with two different collections, correspondingly.
+    """
+    store_foo = CrateDBVectorSearch.from_texts(
+        texts=["foo"],
+        collection_name="test_collection_foo",
+        collection_metadata={"category": "foo"},
+        embedding=FakeEmbeddingsWithAdaDimension(),
+        metadatas=[{"document": "foo"}],
+        connection_string=CONNECTION_STRING,
+        pre_delete_collection=True,
+    )
+    store_bar = CrateDBVectorSearch.from_texts(
+        texts=["bar"],
+        collection_name="test_collection_bar",
+        collection_metadata={"category": "bar"},
+        embedding=FakeEmbeddingsWithAdaDimension(),
+        metadatas=[{"document": "bar"}],
+        connection_string=CONNECTION_STRING,
+        pre_delete_collection=True,
+    )
+    return store_foo, store_bar
 
 
 def test_cratedb_texts() -> None:
@@ -287,30 +348,37 @@ def test_cratedb_with_filter_no_match() -> None:
     assert output == []
 
 
-def test_cratedb_collection_delete() -> None:
-    """
-    Test end to end collection construction and deletion.
-    Uses two different collections of embeddings.
-    """
+@pytest.fixture
+def storage_strategy_langchain_pgvector(mocker: MockerFixture) -> None:
+    mocker.patch(
+        "langchain.vectorstores.cratedb.base.CrateDBVectorSearch.STORAGE_STRATEGY",
+        StorageStrategy.LANGCHAIN_PGVECTOR,
+    )
 
-    store_foo = CrateDBVectorSearch.from_texts(
-        texts=["foo"],
-        collection_name="test_collection_foo",
-        collection_metadata={"category": "foo"},
-        embedding=FakeEmbeddingsWithAdaDimension(),
-        metadatas=[{"document": "foo"}],
-        connection_string=CONNECTION_STRING,
-        pre_delete_collection=True,
+
+@pytest.fixture
+def storage_strategy_embedding_table_per_collection(mocker: MockerFixture) -> None:
+    mocker.patch(
+        "langchain.vectorstores.cratedb.base.CrateDBVectorSearch.STORAGE_STRATEGY",
+        StorageStrategy.EMBEDDING_TABLE_PER_COLLECTION,
     )
-    store_bar = CrateDBVectorSearch.from_texts(
-        texts=["bar"],
-        collection_name="test_collection_bar",
-        collection_metadata={"category": "bar"},
-        embedding=FakeEmbeddingsWithAdaDimension(),
-        metadatas=[{"document": "bar"}],
-        connection_string=CONNECTION_STRING,
-        pre_delete_collection=True,
-    )
+
+
+def test_cratedb_storage_strategy_langchain_pgvector(
+    storage_strategy_langchain_pgvector: None,
+    two_stores: Tuple[CrateDBVectorSearch, CrateDBVectorSearch],
+) -> None:
+    """
+    Verify collection construction and deletion using the vanilla storage strategy.
+
+    It uses two different collections of embeddings. By such, it proves that
+    the embeddings are managed according to the storage strategy.
+
+    In this case, embeddings for multiple collections are managed on behalf of
+    a single database table, called `embedding`.
+    """
+    store_foo, store_bar = two_stores
+
     session = store_foo.Session()
 
     # Verify data in database.
@@ -320,6 +388,10 @@ def test_cratedb_collection_delete() -> None:
         assert False, "Expected CollectionStore objects but received None"
     assert collection_foo.embeddings[0].cmetadata == {"document": "foo"}
     assert collection_bar.embeddings[0].cmetadata == {"document": "bar"}
+
+    # Verify number of records before deletion.
+    assert session.query(store_foo.EmbeddingStore).count() == 2
+    assert session.query(store_bar.EmbeddingStore).count() == 2
 
     # Delete first collection.
     store_foo.delete_collection()
@@ -332,9 +404,52 @@ def test_cratedb_collection_delete() -> None:
     assert collection_foo is None
     assert collection_bar.embeddings[0].cmetadata == {"document": "bar"}
 
-    # Verify that associated embeddings also have been deleted.
-    embeddings_count = session.query(store_foo.EmbeddingStore).count()
-    assert embeddings_count == 1
+    # Verify number of records after deletion, to proof that associated
+    # embeddings also have been deleted.
+    assert session.query(store_foo.EmbeddingStore).count() == 1
+    assert session.query(store_bar.EmbeddingStore).count() == 1
+
+
+def test_cratedb_storage_strategy_embedding_table_per_collection(
+    storage_strategy_embedding_table_per_collection: None,
+    two_stores: Tuple[CrateDBVectorSearch, CrateDBVectorSearch],
+) -> None:
+    """
+    Verify collection construction and deletion using a more advanced storage strategy.
+
+    It uses two different collections of embeddings. By such, it proves that
+    the embeddings are managed according to the storage strategy.
+
+    In this case, embeddings for multiple collections are managed on behalf of
+    separate database tables, called `embedding_{collection_name}`.
+    """
+    store_foo, store_bar = two_stores
+
+    session = store_foo.Session()
+
+    # Verify data in database.
+    collection_foo = store_foo.get_collection(session)
+    collection_bar = store_bar.get_collection(session)
+    assert collection_foo.embeddings[0].cmetadata == {"document": "foo"}
+    assert collection_bar.embeddings[0].cmetadata == {"document": "bar"}
+
+    # Verify number of records before deletion.
+    assert session.query(store_foo.EmbeddingStore).count() == 1
+    assert session.query(store_bar.EmbeddingStore).count() == 1
+
+    # Delete first collection.
+    store_foo.delete_collection()
+
+    # Verify that the "foo" collection has been deleted.
+    collection_foo = store_foo.get_collection(session)
+    collection_bar = store_bar.get_collection(session)
+    assert collection_foo is None
+    assert collection_bar.embeddings[0].cmetadata == {"document": "bar"}
+
+    # Verify number of records after deletion, to proof that associated
+    # embeddings also have been deleted.
+    assert session.query(store_foo.EmbeddingStore).count() == 0
+    assert session.query(store_bar.EmbeddingStore).count() == 1
 
 
 def test_cratedb_collection_with_metadata() -> None:
@@ -662,4 +777,27 @@ def test_cratedb_multicollection_no_embedding_dimension() -> None:
     assert ex.match(
         "Collection can't be accessed without specifying "
         "dimension size of embedding vectors"
+    )
+
+
+def test_cratedb_multicollection_storage_strategy_embedding_table_per_collection() -> (
+    None
+):
+    """
+    Verify that using the multi-collection querying trips corresponding safety checks,
+    when configured to use the `EMBEDDING_TABLE_PER_COLLECTION` storage strategy.
+
+    They are not supported together, yet.
+    """
+    CrateDBVectorSearchMultiCollection.configure(
+        storage_strategy=StorageStrategy.EMBEDDING_TABLE_PER_COLLECTION
+    )
+    with pytest.raises(NotImplementedError) as ex:
+        CrateDBVectorSearchMultiCollection(
+            embedding_function=None,  # type: ignore[arg-type]
+            connection_string=CONNECTION_STRING,
+        )
+    assert ex.match(
+        "Multi-collection querying not supported by strategy: "
+        "StorageStrategy.EMBEDDING_TABLE_PER_COLLECTION"
     )

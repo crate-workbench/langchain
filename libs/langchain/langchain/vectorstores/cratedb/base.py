@@ -29,14 +29,29 @@ from langchain.vectorstores.pgvector import PGVector
 
 
 class DistanceStrategy(str, enum.Enum):
-    """Enumerator of the Distance strategies."""
+    """Enumerator of similarity distance strategies."""
 
     EUCLIDEAN = "euclidean"
     COSINE = "cosine"
     MAX_INNER_PRODUCT = "inner"
 
 
+class StorageStrategy(enum.Enum):
+    """Enumerator of storage strategies."""
+
+    # This storage strategy reflects the vanilla way the pgvector adapter manages
+    # the data model: There is a single `collection` table and a single
+    # `embedding` table.
+    LANGCHAIN_PGVECTOR = "langchain_pgvector"
+
+    # This storage strategy reflects a more advanced way to manage
+    # the data model: There is a single `collection` table, and multiple
+    # `embedding` tables, one per collection.
+    EMBEDDING_TABLE_PER_COLLECTION = "embedding_table_per_collection"
+
+
 DEFAULT_DISTANCE_STRATEGY = DistanceStrategy.EUCLIDEAN
+DEFAULT_STORAGE_STRATEGY = StorageStrategy.LANGCHAIN_PGVECTOR
 
 
 _LANGCHAIN_DEFAULT_COLLECTION_NAME = "langchain"
@@ -80,8 +95,17 @@ class CrateDBVectorSearch(PGVector):
                 connection_string=CONNECTION_STRING,
             )
 
-
     """
+
+    # Select storage strategy: Either use two database tables (`collection`
+    # and `embedding`), or multiple `embedding` tables, one per collection.
+    STORAGE_STRATEGY: StorageStrategy = DEFAULT_STORAGE_STRATEGY
+
+    @classmethod
+    def configure(
+        cls, storage_strategy: StorageStrategy = DEFAULT_STORAGE_STRATEGY
+    ) -> None:
+        cls.STORAGE_STRATEGY = storage_strategy
 
     def __post_init__(
         self,
@@ -119,7 +143,9 @@ class CrateDBVectorSearch(PGVector):
 
     def _init_models(self, embedding: List[float]) -> None:
         """
-        Create SQLAlchemy models at runtime, when not established yet.
+        Initialize SQLAlchemy model classes, using dimensionality from given vector.
+
+        It will only initialize the model classes once.
         """
 
         # TODO: Use a better way to run this only once.
@@ -130,12 +156,27 @@ class CrateDBVectorSearch(PGVector):
         self._init_models_with_dimensionality(size=size)
 
     def _init_models_with_dimensionality(self, size: int) -> None:
-        mf = ModelFactory(dimensions=size)
+        """
+        Initialize SQLAlchemy model classes, using given dimensionality value.
+        """
+        mf = self._get_model_factory(size=size)
         self.BaseModel, self.CollectionStore, self.EmbeddingStore = (
             mf.BaseModel,  # type: ignore[assignment]
             mf.CollectionStore,
             mf.EmbeddingStore,
         )
+
+    def _get_model_factory(self, size: Optional[int] = None) -> ModelFactory:
+        """
+        Initialize SQLAlchemy model classes, based on the selected storage strategy.
+        """
+        if self.STORAGE_STRATEGY is StorageStrategy.EMBEDDING_TABLE_PER_COLLECTION:
+            mf = ModelFactory(
+                dimensions=size, embedding_table=f"embedding_{self.collection_name}"
+            )
+        else:
+            mf = ModelFactory(dimensions=size)
+        return mf
 
     def get_collection(self, session: sqlalchemy.orm.Session) -> Any:
         if self.CollectionStore is None:
@@ -200,7 +241,7 @@ class CrateDBVectorSearch(PGVector):
         """
         Need to overwrite because this `Base` is different from parent's `Base`.
         """
-        mf = ModelFactory()
+        mf = self._get_model_factory()
         mf.Base.metadata.drop_all(self._engine)
 
     def delete(

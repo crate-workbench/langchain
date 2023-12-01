@@ -15,12 +15,21 @@ def generate_uuid() -> str:
 class ModelFactory:
     """Provide SQLAlchemy model objects at runtime."""
 
-    def __init__(self, dimensions: Optional[int] = None):
+    def __init__(
+        self,
+        dimensions: Optional[int] = None,
+        collection_table: Optional[str] = None,
+        embedding_table: Optional[str] = None,
+    ):
         # While it does not have any function here, you will still need to supply a
         # dummy dimension size value for operations like deleting records.
         self.dimensions = dimensions or 1024
 
-        Base: Any = declarative_base()
+        # Set default values for table names.
+        collection_table = collection_table or "collection"
+        embedding_table = embedding_table or "embedding"
+
+        Base: Any = declarative_base(class_registry=dict())
 
         # Optional: Use a custom schema for the langchain tables.
         # Base = declarative_base(metadata=MetaData(schema="langchain"))  # type: Any
@@ -36,8 +45,7 @@ class ModelFactory:
         class CollectionStore(BaseModel):
             """Collection store."""
 
-            __tablename__ = "collection"
-            __table_args__ = {"keep_existing": True}
+            __tablename__ = collection_table
 
             name = sqlalchemy.Column(sqlalchemy.String)
             cmetadata: sqlalchemy.Column = sqlalchemy.Column(ObjectType)
@@ -85,8 +93,7 @@ class ModelFactory:
         class EmbeddingStore(BaseModel):
             """Embedding store."""
 
-            __tablename__ = "embedding"
-            __table_args__ = {"keep_existing": True}
+            __tablename__ = embedding_table
 
             collection_id = sqlalchemy.Column(
                 sqlalchemy.String,
