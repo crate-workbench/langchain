@@ -9,7 +9,7 @@ import sqlalchemy as sa
 import sqlparse
 from _pytest.tmpdir import TempPathFactory
 
-from langchain.document_loaders.sqlalchemy import SQLAlchemyLoader
+from langchain_community.document_loaders.sqlalchemy import SQLAlchemyLoader
 from tests.data import MLB_TEAMS_2012_SQL
 
 logging.basicConfig(level=logging.DEBUG)
