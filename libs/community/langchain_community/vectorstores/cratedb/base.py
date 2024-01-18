@@ -16,7 +16,6 @@ from typing import (
 import sqlalchemy
 from cratedb_toolkit.sqlalchemy.patch import patch_inspector
 from cratedb_toolkit.sqlalchemy.polyfill import (
-    polyfill_refresh_after_dml,
     refresh_table,
 )
 from langchain.docstore.document import Document
@@ -26,6 +25,7 @@ from langchain.vectorstores.pgvector import PGVector
 from sqlalchemy.orm import sessionmaker
 
 from langchain_community.vectorstores.cratedb.model import ModelFactory
+from langchain_community.vectorstores.cratedb.sqlalchemy_patch import polyfill_refresh_after_dml_engine
 
 
 class DistanceStrategy(str, enum.Enum):
@@ -93,11 +93,11 @@ class CrateDBVectorSearch(PGVector):
         # FIXME: Could be a bug in CrateDB SQLAlchemy dialect.
         patch_inspector()
 
-        self._engine = self._create_engine()
+        self._engine = self._bind
         self.Session = sessionmaker(self._engine)
 
-        # TODO: See what can be improved here.
-        polyfill_refresh_after_dml(self.Session)
+        # TODO: Pull in from a future `sqlalchemy-cratedb`.
+        polyfill_refresh_after_dml_engine(self._engine)
 
         # Need to defer initialization, because dimension size
         # can only be figured out at runtime.

@@ -8,7 +8,6 @@ from typing import (
 )
 
 import sqlalchemy
-from sqlalchemy.orm import sessionmaker
 
 from langchain.schema.embeddings import Embeddings
 
@@ -58,10 +57,10 @@ class CrateDBVectorSearchMultiCollection(CrateDBVectorSearch):
         self.logger = logger or logging.getLogger(__name__)
         self.override_relevance_score_fn = relevance_score_fn
         self.engine_args = engine_args or {}
+
         # Create a connection if not provided, otherwise use the provided connection
-        self._engine = self.create_engine()
-        self.Session = sessionmaker(self._engine)
-        self._conn = connection if connection else self.connect()
+        self._bind = connection if connection else self._create_engine()
+
         self.__post_init__()
 
     @classmethod
