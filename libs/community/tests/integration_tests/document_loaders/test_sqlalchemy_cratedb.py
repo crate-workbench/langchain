@@ -12,7 +12,7 @@ import pytest
 import sqlalchemy as sa
 import sqlparse
 
-from langchain.document_loaders import CrateDBLoader
+from langchain_community.document_loaders import CrateDBLoader
 from tests.data import MLB_TEAMS_2012_SQL
 
 logging.basicConfig(level=logging.DEBUG)
