@@ -11,12 +11,13 @@ import sqlalchemy
 from sqlalchemy.orm import sessionmaker
 
 from langchain.schema.embeddings import Embeddings
-from langchain.vectorstores.cratedb.base import (
+
+from langchain_community.vectorstores.cratedb.base import (
     DEFAULT_DISTANCE_STRATEGY,
     CrateDBVectorSearch,
     DistanceStrategy,
 )
-from langchain.vectorstores.pgvector import _LANGCHAIN_DEFAULT_COLLECTION_NAME
+from langchain_community.vectorstores.pgvector import _LANGCHAIN_DEFAULT_COLLECTION_NAME
 
 
 class CrateDBVectorSearchMultiCollection(CrateDBVectorSearch):
