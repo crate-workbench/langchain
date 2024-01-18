@@ -19,13 +19,13 @@ from cratedb_toolkit.sqlalchemy.polyfill import (
     polyfill_refresh_after_dml,
     refresh_table,
 )
-from sqlalchemy.orm import sessionmaker
-
 from langchain.docstore.document import Document
 from langchain.schema.embeddings import Embeddings
 from langchain.utils import get_from_dict_or_env
-from langchain.vectorstores.cratedb.model import ModelFactory
 from langchain.vectorstores.pgvector import PGVector
+from sqlalchemy.orm import sessionmaker
+
+from langchain_community.vectorstores.cratedb.model import ModelFactory
 
 
 class DistanceStrategy(str, enum.Enum):
@@ -93,7 +93,7 @@ class CrateDBVectorSearch(PGVector):
         # FIXME: Could be a bug in CrateDB SQLAlchemy dialect.
         patch_inspector()
 
-        self._engine = self.create_engine()
+        self._engine = self._create_engine()
         self.Session = sessionmaker(self._engine)
 
         # TODO: See what can be improved here.

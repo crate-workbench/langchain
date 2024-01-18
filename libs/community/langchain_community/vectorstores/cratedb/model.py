@@ -5,7 +5,7 @@ import sqlalchemy
 from crate.client.sqlalchemy.types import ObjectType
 from sqlalchemy.orm import Session, declarative_base, relationship
 
-from langchain.vectorstores.cratedb.sqlalchemy_type import FloatVector
+from langchain_community.vectorstores.cratedb.sqlalchemy_type import FloatVector
 
 
 def generate_uuid() -> str:

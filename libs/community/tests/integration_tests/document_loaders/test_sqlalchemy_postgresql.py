@@ -12,7 +12,7 @@ import pytest
 import sqlalchemy as sa
 import sqlparse
 
-from langchain.document_loaders.sqlalchemy import SQLAlchemyLoader
+from langchain_community.document_loaders.sqlalchemy import SQLAlchemyLoader
 from tests.data import MLB_TEAMS_2012_SQL
 
 logging.basicConfig(level=logging.DEBUG)
@@ -37,6 +37,8 @@ def engine() -> sa.Engine:
     """
     Return an SQLAlchemy engine object.
     """
+    if not psycopg2_installed:
+        raise pytest.skip("psycopg2 not installed")
     return sa.create_engine(CONNECTION_STRING, echo=False)
 
 

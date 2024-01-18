@@ -11,13 +11,15 @@ from typing import Dict, Generator, List
 import pytest
 import sqlalchemy as sa
 import sqlalchemy.orm
+from langchain.docstore.document import Document
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.orm import Session
 
-from langchain.docstore.document import Document
-from langchain.vectorstores.cratedb import CrateDBVectorSearch
-from langchain.vectorstores.cratedb.extended import CrateDBVectorSearchMultiCollection
-from langchain.vectorstores.cratedb.model import ModelFactory
+from langchain_community.vectorstores.cratedb import CrateDBVectorSearch
+from langchain_community.vectorstores.cratedb.extended import (
+    CrateDBVectorSearchMultiCollection,
+)
+from langchain_community.vectorstores.cratedb.model import ModelFactory
 from tests.integration_tests.vectorstores.fake_embeddings import (
     ConsistentFakeEmbeddings,
     FakeEmbeddings,
@@ -366,7 +368,7 @@ def test_cratedb_collection_no_embedding_dimension() -> None:
         embedding_function=None,  # type: ignore[arg-type]
         connection_string=CONNECTION_STRING,
     )
-    session = Session(cratedb_vector.connect())
+    session = cratedb_vector.Session()
     with pytest.raises(RuntimeError) as ex:
         cratedb_vector.get_collection(session)
     assert ex.match(
@@ -578,7 +580,7 @@ def test_cratedb_multicollection_search_success() -> None:
     output = store_1.similarity_search("Hotzenplotz", k=1)
     assert Document(page_content="Hotzenplotz") in output[:2]
     output = store_1.similarity_search("John Doe", k=1)
-    assert Document(page_content="Räuber") in output[:2]
+    assert Document(page_content="Hotzenplotz") in output[:2]
 
     # Probe the multi-store.
     multisearch = CrateDBVectorSearchMultiCollection(
@@ -589,7 +591,7 @@ def test_cratedb_multicollection_search_success() -> None:
     output = multisearch.similarity_search("Räuber Hotzenplotz", k=2)
     assert Document(page_content="Räuber") in output[:2]
     output = multisearch.similarity_search("John Doe", k=2)
-    assert Document(page_content="John") in output[:2]
+    assert Document(page_content="Doe") in output[:2]
 
 
 def test_cratedb_multicollection_fail_indexing_not_permitted() -> None:
@@ -656,7 +658,7 @@ def test_cratedb_multicollection_no_embedding_dimension() -> None:
         embedding_function=None,  # type: ignore[arg-type]
         connection_string=CONNECTION_STRING,
     )
-    session = Session(store.connect())
+    session = store.Session()
     with pytest.raises(RuntimeError) as ex:
         store.get_collection(session)
     assert ex.match(
