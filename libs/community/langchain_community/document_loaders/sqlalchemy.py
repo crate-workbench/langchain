@@ -2,8 +2,8 @@ from typing import Dict, List, Optional, Union
 
 import sqlalchemy as sa
 
-from langchain.docstore.document import Document
-from langchain.document_loaders.base import BaseLoader
+from langchain_community.docstore.document import Document
+from langchain_community.document_loaders.base import BaseLoader
 
 
 class SQLAlchemyLoader(BaseLoader):

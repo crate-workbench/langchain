@@ -59,7 +59,7 @@ def sql_histories(
 
 
 def test_add_messages(
-    sql_histories: Tuple[CrateDBChatMessageHistory, CrateDBChatMessageHistory]
+    sql_histories: Tuple[CrateDBChatMessageHistory, CrateDBChatMessageHistory],
 ) -> None:
     history1, _ = sql_histories
     history1.add_user_message("Hello!")
@@ -74,7 +74,7 @@ def test_add_messages(
 
 
 def test_multiple_sessions(
-    sql_histories: Tuple[CrateDBChatMessageHistory, CrateDBChatMessageHistory]
+    sql_histories: Tuple[CrateDBChatMessageHistory, CrateDBChatMessageHistory],
 ) -> None:
     history1, history2 = sql_histories
 
@@ -104,7 +104,7 @@ def test_multiple_sessions(
 
 
 def test_clear_messages(
-    sql_histories: Tuple[CrateDBChatMessageHistory, CrateDBChatMessageHistory]
+    sql_histories: Tuple[CrateDBChatMessageHistory, CrateDBChatMessageHistory],
 ) -> None:
     sql_history, other_history = sql_histories
     sql_history.add_user_message("Hello!")
