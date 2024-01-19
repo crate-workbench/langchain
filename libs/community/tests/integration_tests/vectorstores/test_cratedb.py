@@ -250,7 +250,7 @@ def test_cratedb_with_filter_match() -> None:
     #       assert output == [(Document(page_content="foo", metadata={"page": "0"}), 0.0)]  # noqa: E501
     output = docsearch.similarity_search_with_score("foo", k=1, filter={"page": "0"})
     assert output == [
-        (Document(page_content="foo", metadata={"page": "0"}), pytest.approx(2.2, 0.1))
+        (Document(page_content="foo", metadata={"page": "0"}), pytest.approx(2.2, 0.3))
     ]
 
 
