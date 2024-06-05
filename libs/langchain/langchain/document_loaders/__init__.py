@@ -512,7 +512,6 @@ __all__ = [
     "SlackDirectoryLoader",
     "SnowflakeLoader",
     "SpreedlyLoader",
-    "SQLAlchemyLoader",
     "StripeLoader",
     "TelegramChatApiLoader",
     "TelegramChatFileLoader",

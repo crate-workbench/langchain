@@ -1,5 +1,5 @@
-from langchain_community.document_loaders.sqlalchemy import SQLAlchemyLoader
+from langchain_community.document_loaders.sql_database import SQLDatabaseLoader
 
 
-class CrateDBLoader(SQLAlchemyLoader):
+class CrateDBLoader(SQLDatabaseLoader):
     pass
