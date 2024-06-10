@@ -24,7 +24,7 @@ class CrateDBVectorSearchMultiCollection(CrateDBVectorSearch):
     Provide functionality for searching multiple collections.
     It can not be used for indexing documents.
 
-    To use it, you should have the ``crate[sqlalchemy]`` Python package installed.
+    To use it, you should have the ``sqlalchemy-cratedb`` Python package installed.
 
     Synopsis::
 

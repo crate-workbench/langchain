@@ -3,7 +3,6 @@ import typing as t
 
 import sqlalchemy as sa
 from cratedb_toolkit.sqlalchemy import (
-    patch_inspector,
     polyfill_refresh_after_dml,
     refresh_table,
 )
@@ -80,9 +79,6 @@ class CrateDBChatMessageHistory(SQLChatMessageHistory):
         session_id_field_name: str = "session_id",
         custom_message_converter: t.Optional[BaseMessageConverter] = None,
     ):
-        # FIXME: Refactor elsewhere.
-        patch_inspector()
-
         super().__init__(
             session_id,
             connection_string,

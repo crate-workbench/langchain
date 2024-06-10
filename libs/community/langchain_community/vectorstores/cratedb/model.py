@@ -2,7 +2,10 @@ import uuid
 from typing import Any, List, Optional, Tuple
 
 import sqlalchemy
-from crate.client.sqlalchemy.types import ObjectType
+try:
+    from sqlalchemy_cratedb import ObjectType
+except ImportError:
+    from crate.client.sqlalchemy.types import ObjectType
 from sqlalchemy.orm import Session, declarative_base, relationship
 
 from langchain_community.vectorstores.cratedb.sqlalchemy_type import FloatVector
