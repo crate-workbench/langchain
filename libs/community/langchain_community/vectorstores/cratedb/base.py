@@ -14,7 +14,6 @@ from typing import (
 )
 
 import sqlalchemy
-from cratedb_toolkit.sqlalchemy.patch import patch_inspector
 from cratedb_toolkit.sqlalchemy.polyfill import (
     refresh_table,
 )
@@ -89,9 +88,6 @@ class CrateDBVectorSearch(PGVector):
         """
         Initialize the store.
         """
-
-        # FIXME: Could be a bug in CrateDB SQLAlchemy dialect.
-        patch_inspector()
 
         self._engine = self._bind
         self.Session = sessionmaker(self._engine)
