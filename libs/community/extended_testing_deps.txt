@@ -14,8 +14,8 @@ chardet>=5.1.0,<6
 cloudpathlib>=0.18,<0.19
 cloudpickle>=2.0.0
 cohere>=4,<6
-crate>=0.34.0,<1
-cratedb-toolkit==0.0.12
+crate==1.0.0dev0
+cratedb-toolkit>=0.0.13,<0.1
 databricks-vectorsearch>=0.21,<0.22
 datasets>=2.15.0,<3
 dgml-utils>=0.3.0,<0.4
@@ -73,6 +73,7 @@ requests-toolbelt>=1.0.0,<2
 rspace_client>=2.5.0,<3
 scikit-learn>=1.2.2,<2
 simsimd>=4.3.1,<5
+sqlalchemy-cratedb>=0.37,<1
 sqlite-vss>=0.1.2,<0.2
 streamlit>=1.18.0,<2
 sympy>=1.12,<2
