@@ -48,7 +48,7 @@ except ImportError:
     psycopg2_installed = False
 
 try:
-    import crate.client.sqlalchemy  # noqa: F401
+    import sqlalchemy_cratedb  # noqa: F401
 
     cratedb_installed = True
 except ImportError:

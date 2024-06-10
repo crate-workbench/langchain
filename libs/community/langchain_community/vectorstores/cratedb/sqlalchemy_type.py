@@ -42,8 +42,8 @@ def to_db(value: t.Any, dim: t.Optional[int] = None) -> t.Optional[t.List]:
 
 class FloatVector(UserDefinedType):
     """
-    https://crate.io/docs/crate/reference/en/master/general/ddl/data-types.html#float-vector
-    https://crate.io/docs/crate/reference/en/master/general/builtins/scalar-functions.html#scalar-knn-match
+    https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#float-vector
+    https://cratedb.com/docs/crate/reference/en/latest/general/builtins/scalar-functions.html#scalar-knn-match
     """
 
     cache_ok = True
