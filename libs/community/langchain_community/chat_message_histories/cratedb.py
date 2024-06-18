@@ -2,10 +2,7 @@ import json
 import typing as t
 
 import sqlalchemy as sa
-from cratedb_toolkit.sqlalchemy import (
-    polyfill_refresh_after_dml,
-    refresh_table,
-)
+from sqlalchemy_cratedb.support import refresh_after_dml, refresh_table
 from langchain.schema import BaseMessage, _message_to_dict, messages_from_dict
 
 from langchain_community.chat_message_histories.sql import (
@@ -87,8 +84,8 @@ class CrateDBChatMessageHistory(SQLChatMessageHistory):
             custom_message_converter=custom_message_converter,
         )
 
-        # TODO: Check how this can be improved.
-        polyfill_refresh_after_dml(self.Session)
+        # Patch dialect to invoke `REFRESH TABLE` after each DML operation.
+        refresh_after_dml(self.Session)
 
     def _messages_query(self) -> sa.Select:
         """
