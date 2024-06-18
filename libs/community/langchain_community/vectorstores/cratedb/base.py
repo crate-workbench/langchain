@@ -14,9 +14,6 @@ from typing import (
 )
 
 import sqlalchemy
-from cratedb_toolkit.sqlalchemy.polyfill import (
-    refresh_table,
-)
 from langchain.docstore.document import Document
 from langchain.schema.embeddings import Embeddings
 from langchain.utils import get_from_dict_or_env
@@ -24,7 +21,7 @@ from langchain.vectorstores.pgvector import PGVector
 from sqlalchemy.orm import sessionmaker
 
 from langchain_community.vectorstores.cratedb.model import ModelFactory
-from langchain_community.vectorstores.cratedb.sqlalchemy_patch import polyfill_refresh_after_dml_engine
+from sqlalchemy_cratedb.support import refresh_after_dml, refresh_table
 
 
 class DistanceStrategy(str, enum.Enum):
@@ -92,8 +89,8 @@ class CrateDBVectorSearch(PGVector):
         self._engine = self._bind
         self.Session = sessionmaker(self._engine)
 
-        # TODO: Pull in from a future `sqlalchemy-cratedb`.
-        polyfill_refresh_after_dml_engine(self._engine)
+        # Patch dialect to invoke `REFRESH TABLE` after each DML operation.
+        refresh_after_dml(self._engine)
 
         # Need to defer initialization, because dimension size
         # can only be figured out at runtime.
