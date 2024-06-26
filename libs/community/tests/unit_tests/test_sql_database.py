@@ -1,7 +1,9 @@
 # flake8: noqa: E501
 """Test SQL database wrapper."""
+
 import pytest
 import sqlalchemy as sa
+import sqlalchemy.orm
 from sqlalchemy import (
     Column,
     Integer,
@@ -49,6 +51,11 @@ def db(engine: sa.Engine) -> SQLDatabase:
 def db_lazy_reflection(engine: sa.Engine) -> SQLDatabase:
     metadata_obj.create_all(engine)
     return SQLDatabase(engine, lazy_table_reflection=True)
+
+
+def test_configure_mappers() -> None:
+    """Test that configuring table mappers works."""
+    sqlalchemy.orm.configure_mappers()
 
 
 def test_table_info(db: SQLDatabase) -> None:
