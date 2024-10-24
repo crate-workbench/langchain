@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 # handling optional imports.
 DEPRECATED_LOOKUP = {
     "CrateDBChatMessageHistory": "langchain_community.chat_message_histories",
-    "CrateDBMessageConverter": "langchain_community.chat_message_histories"
+    "CrateDBMessageConverter": "langchain_community.chat_message_histories",
 }
 
 _import_attribute = create_importer(__package__, deprecated_lookups=DEPRECATED_LOOKUP)

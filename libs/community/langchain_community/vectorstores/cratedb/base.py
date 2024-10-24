@@ -19,9 +19,9 @@ from langchain.schema.embeddings import Embeddings
 from langchain.utils import get_from_dict_or_env
 from langchain.vectorstores.pgvector import PGVector
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy_cratedb.support import refresh_after_dml, refresh_table
 
 from langchain_community.vectorstores.cratedb.model import ModelFactory
-from sqlalchemy_cratedb.support import refresh_after_dml, refresh_table
 
 
 class DistanceStrategy(str, enum.Enum):
@@ -87,7 +87,7 @@ class CrateDBVectorSearch(PGVector):
         """
 
         self._engine = self._bind
-        self.Session = sessionmaker(self._engine)
+        self.Session = sessionmaker(bind=self._engine)  # type: ignore[call-overload]
 
         # Patch dialect to invoke `REFRESH TABLE` after each DML operation.
         refresh_after_dml(self._engine)
@@ -199,6 +199,7 @@ class CrateDBVectorSearch(PGVector):
     def delete(
         self,
         ids: Optional[List[str]] = None,
+        collection_only: bool = False,
         **kwargs: Any,
     ) -> None:
         """
@@ -214,7 +215,7 @@ class CrateDBVectorSearch(PGVector):
                 patch, listening to `after_delete` events seems not be
                 able to catch it.
         """
-        super().delete(ids=ids, **kwargs)
+        super().delete(ids=ids, collection_only=collection_only, **kwargs)
 
         # CrateDB: Synchronize data because `on_flush` does not catch it.
         with self.Session() as session:

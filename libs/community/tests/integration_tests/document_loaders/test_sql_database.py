@@ -122,9 +122,7 @@ def pytest_generate_tests(metafunc: "Metafunc") -> None:
             # use `docker compose up postgres` to start the instance
             # it will have the appropriate credentials set up including
             # being exposed on the appropriate port.
-            urls.append(
-                "crate://crate@localhost/?schema=testdrive"
-            )
+            urls.append("crate://crate@localhost/?schema=testdrive")
             ids.append("cratedb")
 
         metafunc.parametrize("db_uri", urls, ids=ids)

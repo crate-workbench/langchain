@@ -4,7 +4,6 @@
 import pytest
 import sqlalchemy as sa
 import sqlalchemy.orm
-from langchain_community.utilities.sql_database import SQLDatabase, truncate_word
 from packaging import version
 from sqlalchemy import (
     Column,
@@ -17,6 +16,8 @@ from sqlalchemy import (
     select,
 )
 from sqlalchemy.engine import Engine, Result
+
+from langchain_community.utilities.sql_database import SQLDatabase, truncate_word
 
 is_sqlalchemy_v1 = version.parse(sa.__version__).major == 1
 

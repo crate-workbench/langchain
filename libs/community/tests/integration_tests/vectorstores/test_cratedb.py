@@ -4,6 +4,7 @@ Test CrateDB `FLOAT_VECTOR` / `KNN_MATCH` functionality.
 cd tests/integration_tests/vectorstores/docker-compose
 docker-compose -f cratedb.yml up
 """
+
 import os
 import re
 from typing import Dict, Generator, List

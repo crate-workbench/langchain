@@ -2,8 +2,8 @@ import uuid
 from typing import Any, List, Optional, Tuple
 
 import sqlalchemy
-from sqlalchemy_cratedb import ObjectType, FloatVector
 from sqlalchemy.orm import Session, declarative_base, relationship
+from sqlalchemy_cratedb import FloatVector, ObjectType
 
 
 def generate_uuid() -> str:
@@ -48,7 +48,7 @@ class ModelFactory:
             )
 
             @classmethod
-            def get_by_name(cls, session: Session, name: str) -> "CollectionStore":
+            def get_by_name(cls, session: Session, name: str) -> Optional["CollectionStore"]:
                 return session.query(cls).filter(cls.name == name).first()  # type: ignore[attr-defined]
 
             @classmethod
@@ -95,8 +95,8 @@ class ModelFactory:
             )
             collection = relationship("CollectionStore", back_populates="embeddings")
 
-            embedding = sqlalchemy.Column(FloatVector(self.dimensions))
-            document = sqlalchemy.Column(sqlalchemy.String, nullable=True)
+            embedding: sqlalchemy.Column = sqlalchemy.Column(FloatVector(self.dimensions))
+            document: sqlalchemy.Column = sqlalchemy.Column(sqlalchemy.String, nullable=True)
             cmetadata: sqlalchemy.Column = sqlalchemy.Column(ObjectType, nullable=True)
 
             # custom_id : any user defined id
