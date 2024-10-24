@@ -2,8 +2,8 @@ import json
 import typing as t
 
 import sqlalchemy as sa
-from sqlalchemy_cratedb.support import refresh_after_dml, refresh_table
 from langchain.schema import BaseMessage, _message_to_dict, messages_from_dict
+from sqlalchemy_cratedb.support import refresh_after_dml, refresh_table
 
 from langchain_community.chat_message_histories.sql import (
     BaseMessageConverter,

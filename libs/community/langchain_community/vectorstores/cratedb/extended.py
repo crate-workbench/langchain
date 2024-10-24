@@ -8,7 +8,6 @@ from typing import (
 )
 
 import sqlalchemy
-
 from langchain.schema.embeddings import Embeddings
 
 from langchain_community.vectorstores.cratedb.base import (

@@ -19,9 +19,9 @@ from langchain.schema.embeddings import Embeddings
 from langchain.utils import get_from_dict_or_env
 from langchain.vectorstores.pgvector import PGVector
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy_cratedb.support import refresh_after_dml, refresh_table
 
 from langchain_community.vectorstores.cratedb.model import ModelFactory
-from sqlalchemy_cratedb.support import refresh_after_dml, refresh_table
 
 
 class DistanceStrategy(str, enum.Enum):

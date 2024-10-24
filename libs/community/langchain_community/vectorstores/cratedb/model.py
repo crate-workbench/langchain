@@ -2,8 +2,8 @@ import uuid
 from typing import Any, List, Optional, Tuple
 
 import sqlalchemy
-from sqlalchemy_cratedb import ObjectType, FloatVector
 from sqlalchemy.orm import Session, declarative_base, relationship
+from sqlalchemy_cratedb import FloatVector, ObjectType
 
 
 def generate_uuid() -> str:
