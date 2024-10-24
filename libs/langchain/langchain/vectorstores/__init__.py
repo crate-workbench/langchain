@@ -18,6 +18,7 @@ and retrieve the data that are 'most similar' to the embedded query.
 
     Embeddings, Document
 """  # noqa: E501
+
 from typing import TYPE_CHECKING, Any
 
 from langchain_core.vectorstores import VectorStore
@@ -42,6 +43,7 @@ if TYPE_CHECKING:
         Clarifai,
         Clickhouse,
         ClickhouseSettings,
+        CrateDBVectorSearch,
         DashVector,
         DatabricksVectorSearch,
         DeepLake,
@@ -118,6 +120,7 @@ DEPRECATED_LOOKUP = {
     "Clarifai": "langchain_community.vectorstores",
     "Clickhouse": "langchain_community.vectorstores",
     "ClickhouseSettings": "langchain_community.vectorstores",
+    "CrateDBVectorSearch": "langchain_community.vectorstores",
     "DashVector": "langchain_community.vectorstores",
     "DatabricksVectorSearch": "langchain_community.vectorstores",
     "DeepLake": "langchain_community.vectorstores",
@@ -201,6 +204,7 @@ __all__ = [
     "Clarifai",
     "Clickhouse",
     "ClickhouseSettings",
+    "CrateDBVectorSearch",
     "DashVector",
     "DatabricksVectorSearch",
     "DeepLake",

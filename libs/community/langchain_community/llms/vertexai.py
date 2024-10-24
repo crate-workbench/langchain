@@ -10,7 +10,8 @@ from langchain_core.callbacks.manager import (
 )
 from langchain_core.language_models.llms import BaseLLM
 from langchain_core.outputs import Generation, GenerationChunk, LLMResult
-from langchain_core.pydantic_v1 import BaseModel, Field, root_validator
+from langchain_core.utils import pre_init
+from pydantic import BaseModel, ConfigDict, Field
 
 from langchain_community.utilities.vertexai import (
     create_retry_decorator,
@@ -35,7 +36,6 @@ if TYPE_CHECKING:
 # This is for backwards compatibility
 # We can remove after `langchain` stops importing it
 _response_to_generation = None
-completion_with_retry = None
 stream_completion_with_retry = None
 
 
@@ -100,6 +100,8 @@ async def acompletion_with_retry(
 
 
 class _VertexAIBase(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
     project: Optional[str] = None
     "The default GCP project to use when making Vertex API calls."
     location: str = "us-central1"
@@ -203,7 +205,7 @@ class _VertexAICommon(_VertexAIBase):
 
 @deprecated(
     since="0.0.12",
-    removal="0.3.0",
+    removal="1.0",
     alternative_import="langchain_google_vertexai.VertexAI",
 )
 class VertexAI(_VertexAICommon, BaseLLM):
@@ -223,7 +225,7 @@ class VertexAI(_VertexAICommon, BaseLLM):
         """Get the namespace of the langchain object."""
         return ["langchain", "llms", "vertexai"]
 
-    @root_validator()
+    @pre_init
     def validate_environment(cls, values: Dict) -> Dict:
         """Validate that the python package exists in environment."""
         tuned_model_name = values.get("tuned_model_name")
@@ -393,7 +395,7 @@ class VertexAI(_VertexAICommon, BaseLLM):
 
 @deprecated(
     since="0.0.12",
-    removal="0.3.0",
+    removal="1.0",
     alternative_import="langchain_google_vertexai.VertexAIModelGarden",
 )
 class VertexAIModelGarden(_VertexAIBase, BaseLLM):
@@ -410,7 +412,7 @@ class VertexAIModelGarden(_VertexAIBase, BaseLLM):
     "Set result_arg to None if output of the model is expected to be a string."
     "Otherwise, if it's a dict, provided an argument that contains the result."
 
-    @root_validator()
+    @pre_init
     def validate_environment(cls, values: Dict) -> Dict:
         """Validate that the python package exists in environment."""
         try:

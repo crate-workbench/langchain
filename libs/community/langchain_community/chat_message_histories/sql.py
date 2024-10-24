@@ -1,4 +1,3 @@
-import asyncio
 import contextlib
 import json
 import logging
@@ -16,7 +15,7 @@ from typing import (
 )
 
 from langchain_core._api import deprecated, warn_deprecated
-from sqlalchemy import Column, Integer, Text, delete, select
+from sqlalchemy import Column, Integer, Select, Text, create_engine, delete, select
 
 try:
     from sqlalchemy.orm import declarative_base
@@ -28,28 +27,35 @@ from langchain_core.messages import (
     message_to_dict,
     messages_from_dict,
 )
-from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
-    async_sessionmaker,
     create_async_engine,
 )
 from sqlalchemy.orm import (
     Session as SQLSession,
 )
 from sqlalchemy.orm import (
-    declarative_base,
     scoped_session,
     sessionmaker,
 )
+
+try:
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+except ImportError:
+    # dummy for sqlalchemy < 2
+    async_sessionmaker = type("async_sessionmaker", (type,), {})  # type: ignore
 
 logger = logging.getLogger(__name__)
 
 
 class BaseMessageConverter(ABC):
     """Convert BaseMessage to the SQLAlchemy model."""
+
+    @abstractmethod
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        raise NotImplementedError
 
     @abstractmethod
     def from_sql_model(self, sql_message: Any) -> BaseMessage:
@@ -114,10 +120,36 @@ _warned_once_already = False
 
 
 class SQLChatMessageHistory(BaseChatMessageHistory):
-    """Chat message history stored in an SQL database."""
+    """Chat message history stored in an SQL database.
+
+    Example:
+        .. code-block:: python
+
+            from langchain_core.messages import HumanMessage
+
+            from langchain_community.chat_message_histories import SQLChatMessageHistory
+
+            # create sync sql message history by connection_string
+            message_history = SQLChatMessageHistory(
+                session_id='foo', connection_string='sqlite///:memory.db'
+            )
+            message_history.add_message(HumanMessage("hello"))
+            message_history.message
+
+            # create async sql message history using aiosqlite
+            # from sqlalchemy.ext.asyncio import create_async_engine
+            #
+            # async_engine = create_async_engine("sqlite+aiosqlite:///memory.db")
+            # async_message_history = SQLChatMessageHistory(
+            #     session_id='foo', connection=async_engine,
+            # )
+            # await async_message_history.aadd_message(HumanMessage("hello"))
+            # await async_message_history.aget_messages()
+
+    """
 
     @property
-    @deprecated("0.2.2", removal="0.3.0", alternative="session_maker")
+    @deprecated("0.2.2", removal="1.0", alternative="session_maker")
     def Session(self) -> Union[scoped_session, async_sessionmaker]:
         return self.session_maker
 
@@ -132,6 +164,21 @@ class SQLChatMessageHistory(BaseChatMessageHistory):
         engine_args: Optional[Dict[str, Any]] = None,
         async_mode: Optional[bool] = None,  # Use only if connection is a string
     ):
+        """Initialize with a SQLChatMessageHistory instance.
+
+        Args:
+            session_id: Indicates the id of the same session.
+            connection_string: String parameter configuration for connecting
+                to the database.
+            table_name: Table name used to save data.
+            session_id_field_name: The name of field of `session_id`.
+            custom_message_converter: Custom message converter for converting
+                database data and `BaseMessage`
+            connection: Database connection object, which can be a string containing
+                connection configuration, Engine object or AsyncEngine object.
+            engine_args: Additional configuration for creating database engines.
+            async_mode: Whether it is an asynchronous connection.
+        """
         assert not (
             connection_string and connection
         ), "connection_string and connection are mutually exclusive"
@@ -140,9 +187,9 @@ class SQLChatMessageHistory(BaseChatMessageHistory):
             if not _warned_once_already:
                 warn_deprecated(
                     since="0.2.2",
-                    removal="0.3.0",
+                    removal="1.0",
                     name="connection_string",
-                    alternative="Use connection instead",
+                    alternative="connection",
                 )
                 _warned_once_already = True
             connection = connection_string
@@ -175,7 +222,9 @@ class SQLChatMessageHistory(BaseChatMessageHistory):
             self.session_maker = scoped_session(sessionmaker(bind=self.engine))
 
         self.session_id_field_name = session_id_field_name
-        self.converter = custom_message_converter or DefaultMessageConverter(table_name)
+        self.converter = custom_message_converter or self.DEFAULT_MESSAGE_CONVERTER(
+            table_name
+        )
         self.sql_model_class = self.converter.get_sql_model_class()
         if not hasattr(self.sql_model_class, session_id_field_name):
             raise ValueError("SQL model class must have session_id column")
@@ -195,6 +244,17 @@ class SQLChatMessageHistory(BaseChatMessageHistory):
             async with self.async_engine.begin() as conn:
                 await conn.run_sync(self.sql_model_class.metadata.create_all)
             self._table_created = True
+
+    def _messages_query(self) -> Select:
+        """Construct an SQLAlchemy selectable to query for messages"""
+        return (
+            select(self.sql_model_class)
+            .where(
+                getattr(self.sql_model_class, self.session_id_field_name)
+                == self.session_id
+            )
+            .order_by(self.sql_model_class.id.asc())
+        )
 
     @property
     def messages(self) -> List[BaseMessage]:  # type: ignore
@@ -252,17 +312,11 @@ class SQLChatMessageHistory(BaseChatMessageHistory):
             await session.commit()
 
     def add_messages(self, messages: Sequence[BaseMessage]) -> None:
-        # The method RunnableWithMessageHistory._exit_history() call
-        #  add_message method by mistake and not aadd_message.
-        # See https://github.com/langchain-ai/langchain/issues/22021
-        if self.async_mode:
-            loop = asyncio.get_event_loop()
-            loop.run_until_complete(self.aadd_messages(messages))
-        else:
-            with self._make_sync_session() as session:
-                for message in messages:
-                    session.add(self.converter.to_sql_model(message, self.session_id))
-                session.commit()
+        # Add all messages in one transaction
+        with self._make_sync_session() as session:
+            for message in messages:
+                session.add(self.converter.to_sql_model(message, self.session_id))
+            session.commit()
 
     async def aadd_messages(self, messages: Sequence[BaseMessage]) -> None:
         # Add all messages in one transaction

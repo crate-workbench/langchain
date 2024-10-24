@@ -51,6 +51,7 @@ if TYPE_CHECKING:
     from langchain_community.chat_models.deepinfra import (
         ChatDeepInfra,
     )
+    from langchain_community.chat_models.edenai import ChatEdenAI
     from langchain_community.chat_models.ernie import (
         ErnieBotChat,
     )
@@ -105,6 +106,7 @@ if TYPE_CHECKING:
     from langchain_community.chat_models.llama_edge import (
         LlamaEdgeChatService,
     )
+    from langchain_community.chat_models.llamacpp import ChatLlamaCpp
     from langchain_community.chat_models.maritalk import (
         ChatMaritalk,
     )
@@ -119,6 +121,17 @@ if TYPE_CHECKING:
     )
     from langchain_community.chat_models.mlx import (
         ChatMLX,
+    )
+    from langchain_community.chat_models.moonshot import (
+        MoonshotChat,
+    )
+    from langchain_community.chat_models.oci_data_science import (
+        ChatOCIModelDeployment,
+        ChatOCIModelDeploymentTGI,
+        ChatOCIModelDeploymentVLLM,
+    )
+    from langchain_community.chat_models.oci_generative_ai import (
+        ChatOCIGenAI,  # noqa: F401
     )
     from langchain_community.chat_models.octoai import ChatOctoAI
     from langchain_community.chat_models.ollama import (
@@ -139,12 +152,20 @@ if TYPE_CHECKING:
     from langchain_community.chat_models.promptlayer_openai import (
         PromptLayerChatOpenAI,
     )
+    from langchain_community.chat_models.sambanova import (
+        ChatSambaNovaCloud,
+        ChatSambaStudio,
+    )
+    from langchain_community.chat_models.snowflake import (
+        ChatSnowflakeCortex,
+    )
     from langchain_community.chat_models.solar import (
         SolarChat,
     )
     from langchain_community.chat_models.sparkllm import (
         ChatSparkLLM,
     )
+    from langchain_community.chat_models.symblai_nebula import ChatNebula
     from langchain_community.chat_models.tongyi import (
         ChatTongyi,
     )
@@ -157,13 +178,15 @@ if TYPE_CHECKING:
     from langchain_community.chat_models.yandex import (
         ChatYandexGPT,
     )
+    from langchain_community.chat_models.yi import (
+        ChatYi,
+    )
     from langchain_community.chat_models.yuan2 import (
         ChatYuan2,
     )
     from langchain_community.chat_models.zhipuai import (
         ChatZhipuAI,
     )
-
 __all__ = [
     "AzureChatOpenAI",
     "BedrockChat",
@@ -175,6 +198,7 @@ __all__ = [
     "ChatOctoAI",
     "ChatDatabricks",
     "ChatDeepInfra",
+    "ChatEdenAI",
     "ChatEverlyAI",
     "ChatFireworks",
     "ChatFriendli",
@@ -190,16 +214,25 @@ __all__ = [
     "ChatMLflowAIGateway",
     "ChatMaritalk",
     "ChatMlflow",
+    "ChatNebula",
+    "ChatOCIGenAI",
+    "ChatOCIModelDeployment",
+    "ChatOCIModelDeploymentVLLM",
+    "ChatOCIModelDeploymentTGI",
     "ChatOllama",
     "ChatOpenAI",
     "ChatPerplexity",
     "ChatPremAI",
+    "ChatSambaNovaCloud",
+    "ChatSambaStudio",
     "ChatSparkLLM",
+    "ChatSnowflakeCortex",
     "ChatTongyi",
     "ChatVertexAI",
     "ChatYandexGPT",
     "ChatYuan2",
     "ChatZhipuAI",
+    "ChatLlamaCpp",
     "ErnieBotChat",
     "FakeListChatModel",
     "GPTRouter",
@@ -208,11 +241,13 @@ __all__ = [
     "JinaChat",
     "LlamaEdgeChatService",
     "MiniMaxChat",
+    "MoonshotChat",
     "PaiEasChatEndpoint",
     "PromptLayerChatOpenAI",
     "QianfanChatEndpoint",
     "SolarChat",
     "VolcEngineMaasChat",
+    "ChatYi",
 ]
 
 
@@ -227,6 +262,7 @@ _module_lookup = {
     "ChatDatabricks": "langchain_community.chat_models.databricks",
     "ChatDeepInfra": "langchain_community.chat_models.deepinfra",
     "ChatEverlyAI": "langchain_community.chat_models.everlyai",
+    "ChatEdenAI": "langchain_community.chat_models.edenai",
     "ChatFireworks": "langchain_community.chat_models.fireworks",
     "ChatFriendli": "langchain_community.chat_models.friendli",
     "ChatGooglePalm": "langchain_community.chat_models.google_palm",
@@ -241,10 +277,18 @@ _module_lookup = {
     "ChatMLX": "langchain_community.chat_models.mlx",
     "ChatMaritalk": "langchain_community.chat_models.maritalk",
     "ChatMlflow": "langchain_community.chat_models.mlflow",
+    "ChatNebula": "langchain_community.chat_models.symblai_nebula",
     "ChatOctoAI": "langchain_community.chat_models.octoai",
+    "ChatOCIGenAI": "langchain_community.chat_models.oci_generative_ai",
+    "ChatOCIModelDeployment": "langchain_community.chat_models.oci_data_science",
+    "ChatOCIModelDeploymentVLLM": "langchain_community.chat_models.oci_data_science",
+    "ChatOCIModelDeploymentTGI": "langchain_community.chat_models.oci_data_science",
     "ChatOllama": "langchain_community.chat_models.ollama",
     "ChatOpenAI": "langchain_community.chat_models.openai",
     "ChatPerplexity": "langchain_community.chat_models.perplexity",
+    "ChatSambaNovaCloud": "langchain_community.chat_models.sambanova",
+    "ChatSambaStudio": "langchain_community.chat_models.sambanova",
+    "ChatSnowflakeCortex": "langchain_community.chat_models.snowflake",
     "ChatSparkLLM": "langchain_community.chat_models.sparkllm",
     "ChatTongyi": "langchain_community.chat_models.tongyi",
     "ChatVertexAI": "langchain_community.chat_models.vertexai",
@@ -259,12 +303,15 @@ _module_lookup = {
     "JinaChat": "langchain_community.chat_models.jinachat",
     "LlamaEdgeChatService": "langchain_community.chat_models.llama_edge",
     "MiniMaxChat": "langchain_community.chat_models.minimax",
+    "MoonshotChat": "langchain_community.chat_models.moonshot",
     "PaiEasChatEndpoint": "langchain_community.chat_models.pai_eas_endpoint",
     "PromptLayerChatOpenAI": "langchain_community.chat_models.promptlayer_openai",
     "SolarChat": "langchain_community.chat_models.solar",
     "QianfanChatEndpoint": "langchain_community.chat_models.baidu_qianfan_endpoint",
     "VolcEngineMaasChat": "langchain_community.chat_models.volcengine_maas",
     "ChatPremAI": "langchain_community.chat_models.premai",
+    "ChatLlamaCpp": "langchain_community.chat_models.llamacpp",
+    "ChatYi": "langchain_community.chat_models.yi",
 }
 
 

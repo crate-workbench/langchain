@@ -43,6 +43,9 @@ if TYPE_CHECKING:
     from langchain_community.vectorstores.apache_doris import (
         ApacheDoris,
     )
+    from langchain_community.vectorstores.aperturedb import (
+        ApertureDB,
+    )
     from langchain_community.vectorstores.astradb import (
         AstraDB,
     )
@@ -54,6 +57,9 @@ if TYPE_CHECKING:
     )
     from langchain_community.vectorstores.azure_cosmos_db import (
         AzureCosmosDBVectorSearch,
+    )
+    from langchain_community.vectorstores.azure_cosmos_db_no_sql import (
+        AzureCosmosDBNoSqlVectorSearch,
     )
     from langchain_community.vectorstores.azuresearch import (
         AzureSearch,
@@ -85,6 +91,9 @@ if TYPE_CHECKING:
     )
     from langchain_community.vectorstores.couchbase import (
         CouchbaseVectorStore,
+    )
+    from langchain_community.vectorstores.cratedb import (
+        CrateDBVectorSearch,
     )
     from langchain_community.vectorstores.dashvector import (
         DashVector,
@@ -224,6 +233,9 @@ if TYPE_CHECKING:
     from langchain_community.vectorstores.sklearn import (
         SKLearnVectorStore,
     )
+    from langchain_community.vectorstores.sqlitevec import (
+        SQLiteVec,
+    )
     from langchain_community.vectorstores.sqlitevss import (
         SQLiteVSS,
     )
@@ -308,9 +320,11 @@ __all__ = [
     "AnalyticDB",
     "Annoy",
     "ApacheDoris",
+    "ApertureDB",
     "AstraDB",
     "AtlasDB",
     "AwaDB",
+    "AzureCosmosDBNoSqlVectorSearch",
     "AzureCosmosDBVectorSearch",
     "AzureSearch",
     "BESVectorStore",
@@ -323,6 +337,7 @@ __all__ = [
     "Clickhouse",
     "ClickhouseSettings",
     "CouchbaseVectorStore",
+    "CrateDBVectorSearch",
     "DashVector",
     "DatabricksVectorSearch",
     "DeepLake",
@@ -372,6 +387,7 @@ __all__ = [
     "Relyt",
     "Rockset",
     "SKLearnVectorStore",
+    "SQLiteVec",
     "SQLiteVSS",
     "ScaNN",
     "SemaDB",
@@ -409,10 +425,12 @@ _module_lookup = {
     "AnalyticDB": "langchain_community.vectorstores.analyticdb",
     "Annoy": "langchain_community.vectorstores.annoy",
     "ApacheDoris": "langchain_community.vectorstores.apache_doris",
+    "ApertureDB": "langchain_community.vectorstores.aperturedb",
     "AstraDB": "langchain_community.vectorstores.astradb",
     "AtlasDB": "langchain_community.vectorstores.atlas",
     "AwaDB": "langchain_community.vectorstores.awadb",
-    "AzureCosmosDBVectorSearch": "langchain_community.vectorstores.azure_cosmos_db",
+    "AzureCosmosDBNoSqlVectorSearch": "langchain_community.vectorstores.azure_cosmos_db_no_sql",  # noqa: E501
+    "AzureCosmosDBVectorSearch": "langchain_community.vectorstores.azure_cosmos_db",  # noqa: E501
     "AzureSearch": "langchain_community.vectorstores.azuresearch",
     "BaiduVectorDB": "langchain_community.vectorstores.baiduvectordb",
     "BESVectorStore": "langchain_community.vectorstores.baiducloud_vector_search",
@@ -424,6 +442,7 @@ _module_lookup = {
     "Clickhouse": "langchain_community.vectorstores.clickhouse",
     "ClickhouseSettings": "langchain_community.vectorstores.clickhouse",
     "CouchbaseVectorStore": "langchain_community.vectorstores.couchbase",
+    "CrateDBVectorSearch": "langchain_community.vectorstores.cratedb",
     "DashVector": "langchain_community.vectorstores.dashvector",
     "DatabricksVectorSearch": "langchain_community.vectorstores.databricks_vector_search",  # noqa: E501
     "DeepLake": "langchain_community.vectorstores.deeplake",
@@ -473,6 +492,7 @@ _module_lookup = {
     "Relyt": "langchain_community.vectorstores.relyt",
     "Rockset": "langchain_community.vectorstores.rocksetdb",
     "SKLearnVectorStore": "langchain_community.vectorstores.sklearn",
+    "SQLiteVec": "langchain_community.vectorstores.sqlitevec",
     "SQLiteVSS": "langchain_community.vectorstores.sqlitevss",
     "ScaNN": "langchain_community.vectorstores.scann",
     "SemaDB": "langchain_community.vectorstores.semadb",

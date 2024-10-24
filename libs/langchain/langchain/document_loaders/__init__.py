@@ -14,6 +14,7 @@
 
     Document, <name>TextSplitter
 """
+
 from typing import TYPE_CHECKING, Any
 
 from langchain._api import create_importer
@@ -56,6 +57,7 @@ if TYPE_CHECKING:
         ConfluenceLoader,
         CoNLLULoader,
         CouchbaseLoader,
+        CrateDBLoader,
         CSVLoader,
         CubeSemanticLoader,
         DatadogLogsLoader,
@@ -239,6 +241,7 @@ DEPRECATED_LOOKUP = {
     "ConcurrentLoader": "langchain_community.document_loaders",
     "ConfluenceLoader": "langchain_community.document_loaders",
     "CouchbaseLoader": "langchain_community.document_loaders",
+    "CrateDBLoader": "langchain_community.document_loaders",
     "CubeSemanticLoader": "langchain_community.document_loaders",
     "DataFrameLoader": "langchain_community.document_loaders",
     "DatadogLogsLoader": "langchain_community.document_loaders",
@@ -420,6 +423,7 @@ __all__ = [
     "ConcurrentLoader",
     "ConfluenceLoader",
     "CouchbaseLoader",
+    "CrateDBLoader",
     "CubeSemanticLoader",
     "DataFrameLoader",
     "DatadogLogsLoader",
