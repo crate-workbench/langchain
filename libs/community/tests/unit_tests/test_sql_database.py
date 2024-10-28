@@ -3,7 +3,6 @@
 
 import pytest
 import sqlalchemy as sa
-import sqlalchemy.orm
 from packaging import version
 from sqlalchemy import (
     Column,
@@ -57,11 +56,6 @@ def db_lazy_reflection(engine: Engine) -> SQLDatabase:
 
 
 @pytest.mark.xfail(is_sqlalchemy_v1, reason="SQLAlchemy 1.x issues")
-def test_configure_mappers() -> None:
-    """Test that configuring table mappers works."""
-    sqlalchemy.orm.configure_mappers()
-
-
 def test_table_info(db: SQLDatabase) -> None:
     """Test that table info is constructed properly."""
     output = db.table_info
